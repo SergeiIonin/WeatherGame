@@ -3,8 +3,8 @@ package weathergame.service
 import akka.actor.{Actor, ActorRef, Props}
 import akka.util.Timeout
 import weathergame.calculator.WeatherCalculatorActor
-import weathergame.user.UserActor
-import weathergame.weather.{User, Users, Weather}
+import weathergame.user.{User, UserActor, Users}
+import weathergame.weather.Weather
 
 import scala.concurrent.Future
 

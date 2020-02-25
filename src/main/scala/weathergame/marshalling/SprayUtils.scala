@@ -2,7 +2,8 @@ package weathergame.marshalling
 
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsString, JsValue, JsonFormat}
 import weathergame.gamemechanics.Result
-import weathergame.weather.{ForecastRequest, User, Users, Weather}
+import weathergame.user.{User, Users}
+import weathergame.weather.{ForecastRequest, Weather}
 import weathergame.weather.WeatherTypes._
 
 

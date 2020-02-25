@@ -4,7 +4,7 @@ import akka.actor.{Actor, Props}
 import weathergame.calculator.WeatherCalculatorActor.Calculate
 import weathergame.gamemechanics.Result
 import weathergame.user.UserActor.{Add, GetUser}
-import weathergame.weather.{User, Weather}
+import weathergame.weather.Weather
 
 object UserActor {
 

@@ -1,17 +1,18 @@
 package weathergame.restapi
 
 import akka.actor._
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.pattern.ask
 import akka.util.Timeout
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import weathergame.gamemechanics.Result
-import weathergame.marshalling.SprayUtils.{Error, ErrorJsonProtocol, ResultJsonProtocol, UserJsonProtocol, WeatherJsonProtocol}
+import weathergame.marshalling.WeatherServiceMarshaller
 import weathergame.service.WeatherServiceActor
-import weathergame.weather.{User, Users, Weather}
+import weathergame.user.{User, Users}
+import weathergame.weather.Weather
 
 import scala.concurrent.ExecutionContext
 
@@ -23,14 +24,12 @@ class RestApi(system: ActorSystem, timeout: Timeout)
   def createWeatherServiceActor = system.actorOf(WeatherServiceActor.props, WeatherServiceActor.name)
 }
 
-trait RestRoutes extends WeatherServiceApi
-with WeatherJsonProtocol with UserJsonProtocol with ResultJsonProtocol with ErrorJsonProtocol {
+trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
 
+  import spray.json._
   import StatusCodes._
-  import weathergame.marshalling.SprayUtils.UserMarshaller.{user, users}
-  def routes: Route = usersRoute ~ userRoute //~ resultsRoute ~ forecastsRoute
 
-  val x = implicitly[RootJsonFormat[User]]
+  def routes: Route = usersRoute ~ userRoute //~ resultsRoute ~ forecastsRoute
 
   def usersRoute =
     pathPrefix("users") {
@@ -38,12 +37,11 @@ with WeatherJsonProtocol with UserJsonProtocol with ResultJsonProtocol with Erro
         get {
           // GET /users
           onSuccess(getUsers()) { users: Users =>
-            complete(OK/*, users*/)
+            complete(OK /*, users*/)
           }
         }
       }
     }
-
 
 
   def userRoute =
@@ -51,13 +49,14 @@ with WeatherJsonProtocol with UserJsonProtocol with ResultJsonProtocol with Erro
       pathEndOrSingleSlash {
         post {
           // POST /games/:user
-          entity(as[User]) { usr: User =>
+          entity(as[User]) {
+            ??? /*usr: Weather =>
             onSuccess(createUser(usr)) {
               case WeatherServiceActor.UserCreated(usr.login) => complete(Created, user)
               case WeatherServiceActor.UserExists =>
                 val err = Error(s"$user user already exists.")
                 complete(BadRequest, err)
-            }
+            }*/
           }
         } /*~
           get {
@@ -71,11 +70,11 @@ with WeatherJsonProtocol with UserJsonProtocol with ResultJsonProtocol with Erro
             onSuccess(cancelEvent(event)) {
               _.fold(complete(NotFound))(e => complete(OK, e))
             }
-          }*/
+          }
       }
-    }
+    }*/
 
-/*  def resultsRoute =
+        /*  def resultsRoute =
     pathPrefix("events") {
       pathEndOrSingleSlash {
         get {
@@ -87,7 +86,7 @@ with WeatherJsonProtocol with UserJsonProtocol with ResultJsonProtocol with Erro
       }
     }*/
 
- /* def forecastsRoute =
+        /* def forecastsRoute =
     pathPrefix("forecasts" / Segment / "tickets") { event =>
       post {
         pathEndOrSingleSlash {
@@ -101,20 +100,25 @@ with WeatherJsonProtocol with UserJsonProtocol with ResultJsonProtocol with Erro
       }
     }*/
 
+      }
+    }
 }
 
 trait WeatherServiceApi {
+
   import weathergame.service.WeatherServiceActor._
 
   def createWeatherServiceActor: ActorRef
+
   implicit def executionContext: ExecutionContext
+
   implicit def requestTimeout: Timeout
 
   lazy val weatherServiceActor = createWeatherServiceActor
 
-/*  def createGame(event: String) =
-    weatherServiceActor.ask(CreateEvent(event, nrOfTickets))
-      .mapTo[EventResponse]*/
+  /*  def createGame(event: String) =
+weatherServiceActor.ask(CreateEvent(event, nrOfTickets))
+.mapTo[EventResponse]*/
 
   def createUser(user: User) = {
     weatherServiceActor.ask(CreateUser).mapTo[UserResponse]
@@ -130,15 +134,15 @@ trait WeatherServiceApi {
   def getGamesResults(userId: String) =
     weatherServiceActor.ask(GetAllResults(userId)).mapTo[Result]
 
-/*  def getGamesResults() =
-    weatherServiceActor.ask(GetEvents).mapTo[Events]
+  /*  def getGamesResults() =
+weatherServiceActor.ask(GetEvents).mapTo[Events]
 
-  def deleteGame(event: String) =
-    weatherServiceActor.ask(CancelEvent(event))
-      .mapTo[Option[Event]]
+def deleteGame(event: String) =
+weatherServiceActor.ask(CancelEvent(event))
+.mapTo[Option[Event]]
 
-  def getRaiting(event: String, tickets: Int) =
-    weatherServiceActor.ask(GetTickets(event, tickets))
-      .mapTo[TicketSeller.Tickets]*/
+def getRaiting(event: String, tickets: Int) =
+weatherServiceActor.ask(GetTickets(event, tickets))
+.mapTo[TicketSeller.Tickets]*/
 }
 //
