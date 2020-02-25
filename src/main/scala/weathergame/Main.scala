@@ -1,15 +1,14 @@
-package com.goticks
+package weathergame
 
 import scala.concurrent.Future
-
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
+import weathergame.restapi.RestApi
 
 object Main extends App
     with RequestTimeout {
@@ -27,10 +26,10 @@ object Main extends App
   val bindingFuture: Future[ServerBinding] =
     Http().bindAndHandle(api, host, port) //Starts the HTTP server
  
-  val log =  Logging(system.eventStream, "go-ticks")
+  val log =  Logging(system.eventStream, "weather-game")
   bindingFuture.map { serverBinding =>
     log.info(s"RestApi bound to ${serverBinding.localAddress} ")
-  }.onFailure { 
+  }.recoverWith {
     case ex: Exception =>
       log.error(ex, "Failed to bind to {}:{}!", host, port)
       system.terminate()

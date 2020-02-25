@@ -1,30 +1,37 @@
 package weathergame.calculator
 
 import akka.actor.{Actor, Props}
-import weathergame.calculator.WeatherCalculatorActor.{Add, GetScore}
-import weathergame.weather.{Forecast, RealWeather}
+import weathergame.calculator.WeatherCalculatorActor
+import weathergame.calculator.WeatherCalculatorActor.Calculate
+import weathergame.gamemechanics.Result
+import weathergame.weather.Weather
 
 object WeatherCalculatorActor {
 
   def props(name: String) = Props(new WeatherCalculatorActor(name))
 
   /**
-   * Add(forecast)
+   *
    * */
-
-  case class Add(forecasts: List[Forecast])
-  case class GetRealWeather(reality: List[RealWeather]) // will interact with openweather API
-  case object GetScore
+  case class Calculate(forecast: Weather)
+  case class GetRealWeather(reality: Weather) // will interact with openweather API
 
 }
 
 class WeatherCalculatorActor(name: String) extends Actor {
 
-  var forecasts = List.empty[Forecast] // user can submit several forecasts
+  var forecasts = List.empty[Weather] // user can submit several forecasts
+  var results = Map.empty[String, Result]
 
   override def receive: Receive = {
-    case Add(forecasts) => forecasts ++ forecasts
-    case GetScore =>
+    case Calculate(forecast) => {
+      val realWeather = Weather() // stub
+      forecasts ++ List(forecast)
+      val newResult = Result(89.0, 64.0, 90.0, 1, 2, 85.0) // stub
+      results += (forecast.id -> newResult)
+
+    }
+
 
   }
 

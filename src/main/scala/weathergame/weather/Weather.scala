@@ -1,32 +1,38 @@
 package weathergame.weather
 
 import java.util.UUID.randomUUID
+import WeatherUtils._
 
-import Weather._
+import weathergame.weather.WeatherTypes.{Precipitation, Sky}
 
-abstract case class Weather(val id: String = generateId,
-                       val temperature: Option[Int] = None,
-                       val precipitation: Option[Precipitation] = None,
-                       val sky: Option[Sky] = None,
-                       val humidity: Option[Int] = None,
-                       val wind: Option[Int] = None
+case class Weather(id: String = generateId,
+                       temperature: Option[Int] = None,
+                       precipitation: Option[Precipitation] = None,
+                       sky: Option[Sky] = None,
+                       humidity: Option[Int] = None,
+                       wind: Option[Int] = None
                       )
 
-object Weather {
-  def generateId = randomUUID.toString
+object WeatherTypes {
 
   sealed trait Precipitation
 
-  case class Rain() extends Precipitation
-  case class Snow() extends Precipitation
-  case class Hail() extends Precipitation
+  case class NoPrecipitation(name: String = "no") extends Precipitation
+  case class Rain(name: String = "rain") extends Precipitation
+  case class Snow(name: String = "snow") extends Precipitation
+  case class Hail(name: String = "hail") extends Precipitation
 
   sealed trait Sky
 
-  case class Sunny() extends Sky
-  case class Cloudy() extends Sky
-  case class DarkCloudy() extends Sky
-  case class PartlyCloudy() extends Sky
+  case class Sunny(name: String = "sunny") extends Sky
+  case class Cloudy(name: String = "cloudy") extends Sky
+  case class DarkCloudy(name: String = "darkCloudy") extends Sky
+  case class PartlyCloudy(name: String = "partlyCloudy") extends Sky
+
+}
+
+object WeatherUtils {
+  def generateId = randomUUID.toString //todo how to use method
 }
 
 

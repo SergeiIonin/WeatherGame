@@ -1,3 +1,4 @@
+/*
 package weathergame.openweather
 
 import akka.actor.{Actor, Props}
@@ -11,7 +12,7 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.stream.ActorMaterializer
 import akka.util.ByteString
 import spray.json._
-import weathergame.weather.RealWeather
+import weathergame.weather.Weather
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -39,7 +40,7 @@ class WebWeatherCollector()(
 
     responseFuture.flatMap { res: HttpResponse =>
       res.entity.dataBytes.runFold(ByteString(""))(_ ++ _).map { body =>
-        val manifest = body.decodeString(Charset.defaultCharset()).parseJson.convertTo[RealWeather]
+        val manifest = body.decodeString(Charset.defaultCharset()).parseJson.convertTo[Weather]
         Info(
           manifest.photo_manifest.max_sol,
           manifest.photo_manifest.name,
@@ -60,3 +61,4 @@ class WebWeatherCollectorActor(name: String) extends Actor {
     }
   }
 }
+*/

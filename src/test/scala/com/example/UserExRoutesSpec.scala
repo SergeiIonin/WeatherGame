@@ -1,3 +1,4 @@
+/*
 package com.example
 
 //#user-routes-spec
@@ -11,7 +12,7 @@ import org.scalatest.{ Matchers, WordSpec }
 import akka.actor.typed.scaladsl.adapter._
 
 //#set-up
-class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest {
+class UserExRoutesSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest {
   //#test-top
 
   // the Akka HTTP route testkit does not yet support a typed actor system (https://github.com/akka/akka-http/issues/2036)
@@ -53,7 +54,7 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
 
     //#testing-post
     "be able to add users (POST /users)" in {
-      val user = User("Kapi", 42, "jp")
+      val user = UserEx("Kapi", 42, "jp")
       val userEntity = Marshal(user).to[MessageEntity].futureValue // futureValue is from ScalaFutures
 
       // using the RequestBuilding DSL:
@@ -93,3 +94,4 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
 }
 //#set-up
 //#user-routes-spec
+*/
