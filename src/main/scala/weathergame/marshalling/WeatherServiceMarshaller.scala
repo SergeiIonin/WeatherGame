@@ -7,7 +7,7 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
   import weathergame.gamemechanics.Result
   import weathergame.weather.WeatherTypes._
   import weathergame.weather.{ForecastRequest, Weather}
-  import weathergame.user.{User, Users}
+  import weathergame.player.{Player, Players}
   // formatters related to sky
   implicit val sunny = jsonFormat1(Sunny)
   implicit val cloudy = jsonFormat1(Cloudy)
@@ -59,13 +59,14 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
       case _ => throw DeserializationException("Object expected")
     }
   }
-
+  // final Weather formatter
   implicit val weather = jsonFormat6(Weather)
 
   implicit val forecastRequest = jsonFormat1(ForecastRequest)
 
-  implicit val user = jsonFormat2(User)
-  implicit val users = jsonFormat1(Users)
+
+  implicit val player = jsonFormat2(Player)
+  implicit val players = jsonFormat1(Players)
 
   implicit val result = jsonFormat6(Result)
 

@@ -3,7 +3,7 @@ package weathergame.service
 import akka.actor.{Actor, ActorRef, Props}
 import akka.util.Timeout
 import weathergame.calculator.WeatherCalculatorActor
-import weathergame.user.{User, UserActor, Users}
+import weathergame.player.{Player, PlayerActor, Players}
 import weathergame.weather.Weather
 
 import scala.concurrent.Future
@@ -12,20 +12,20 @@ object WeatherServiceActor {
   def props(implicit timeout: Timeout) = Props(new WeatherServiceActor)
   def name = "weatherService"
 
-  // user protocol
-  case class CreateUser(user: User)
-  case class GetUser(login: String)
-  case object GetUsers
+  // player protocol
+  case class CreatePlayer(player: Player)
+  case class GetPlayer(login: String)
+  case object GetPlayers
   case class GetRaiting() // some improvements like pagination will be added later
 
-  sealed trait UserResponse
-  case class UserCreated(login: String) extends UserResponse
-  case object UserExists extends UserResponse
+  sealed trait PlayerResponse
+  case class PlayerCreated(login: String) extends PlayerResponse
+  case object PlayerExists extends PlayerResponse
 
   // weather protocol
   case class CreateForecast(forecast: Weather) // just one forecast could be created
   case class GetResult(forecastId: String)
-  case class GetAllResults(userId: String)
+  case class GetAllResults(playerId: String)
 
   sealed trait ForecastResponse
   case class ForecastCreated(name: String, forecast: Weather) extends ForecastResponse
@@ -40,43 +40,43 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor {
   def createWeatherCalculatorActor(name: String) =
     context.actorOf(WeatherCalculatorActor.props(name), name)
 
-  def createUserActor(login: String) =
-    context.actorOf(UserActor.props(login), login)
+  def createPlayerActor(login: String) =
+    context.actorOf(PlayerActor.props(login), login)
 
-  var users = Set.empty[String]
+  var players = Set.empty[String]
 
   override def receive: Receive = {
-    case CreateUser(user) => {
-      val newLogin = user.login
+    case CreatePlayer(player) => {
+      val newLogin = player.login
 
       def create() = {
-        if (!users.contains(newLogin)) {
-          users += newLogin
-          val userActor = createUserActor(newLogin)
-          userActor ! UserActor.Add(user)
-          sender() ! UserCreated(newLogin)
+        if (!players.contains(newLogin)) {
+          players += newLogin
+          val playerActor = createPlayerActor(newLogin)
+          playerActor ! PlayerActor.Add(player)
+          sender() ! PlayerCreated(newLogin)
         } else
-          sender() ! UserExists
+          sender() ! PlayerExists
       }
 
       create()
     }
-    case GetUser(login) => {
+    case GetPlayer(login) => {
       def notFound() = sender() ! None
-      def getUser(child: ActorRef) = child forward UserActor.GetUser
-      context.child(login).fold(notFound())(getUser)
+      def getPlayer(child: ActorRef) = child forward PlayerActor.GetPlayer
+      context.child(login).fold(notFound())(getPlayer)
     }
-    case GetUsers => {
+    case GetPlayers => {
       import akka.pattern.ask
       import akka.pattern.pipe
 
-      def getUsers = context.children.map { child =>
-        self.ask(GetUser(child.path.name)).mapTo[Option[User]]
+      def getPlayers = context.children.map { child =>
+        self.ask(GetPlayer(child.path.name)).mapTo[Option[Player]]
       }
-      def convertToUsers(f: Future[Iterable[Option[User]]]) =
-        f.map(_.flatten).map(l => Users(l.toVector))
+      def convertToPlayers(f: Future[Iterable[Option[Player]]]) =
+        f.map(_.flatten).map(l => Players(l.toVector))
 
-      pipe(convertToUsers(Future.sequence(getUsers))) to sender()
+      pipe(convertToPlayers(Future.sequence(getPlayers))) to sender()
     }
 
     case CreateForecast(forecast) => {

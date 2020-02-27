@@ -20,7 +20,7 @@ object WeatherCalculatorActor {
 
 class WeatherCalculatorActor(name: String) extends Actor {
 
-  var forecasts = List.empty[Weather] // user can submit several forecasts
+  var forecasts = List.empty[Weather] // player can submit several forecasts
   var results = Map.empty[String, Result]
 
   override def receive: Receive = {

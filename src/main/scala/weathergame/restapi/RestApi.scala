@@ -11,8 +11,9 @@ import akka.util.Timeout
 import weathergame.gamemechanics.Result
 import weathergame.marshalling.WeatherServiceMarshaller
 import weathergame.service.WeatherServiceActor
-import weathergame.user.{User, Users}
+import weathergame.player.{Player, Players}
 import weathergame.weather.Weather
+import weathergame.weather.WeatherTypes.Rain
 
 import scala.concurrent.ExecutionContext
 
@@ -29,39 +30,39 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
   import spray.json._
   import StatusCodes._
 
-  def routes: Route = usersRoute ~ userRoute //~ resultsRoute ~ forecastsRoute
+  def routes: Route = playersRoute ~ playerRoute //~ resultsRoute ~ forecastsRoute
 
-  def usersRoute =
-    pathPrefix("users") {
+  def playersRoute =
+    pathPrefix("players") {
       pathEndOrSingleSlash {
         get {
-          // GET /users
-          onSuccess(getUsers()) { users: Users =>
-            complete(OK /*, users*/)
+          // GET /players
+          onSuccess(getPlayers()) { players: Players =>
+            complete(OK /*, players*/)
           }
         }
       }
     }
 
+  implicit val plr = jsonFormat2(Player)
 
-  def userRoute =
-    pathPrefix("games" / Segment) { user =>
+  def playerRoute =
+    pathPrefix("players" / Segment) { player =>
       pathEndOrSingleSlash {
         post {
-          // POST /games/:user
-          entity(as[User]) {
-            ??? /*usr: Weather =>
-            onSuccess(createUser(usr)) {
-              case WeatherServiceActor.UserCreated(usr.login) => complete(Created, user)
-              case WeatherServiceActor.UserExists =>
-                val err = Error(s"$user user already exists.")
+          // POST /players/:player
+          entity(as[Player]) { p => complete(Created, p) /*plr: Player =>
+            onSuccess(createPlayer(plr)) {
+              case WeatherServiceActor.PlayerCreated(plr.login) => complete(Created, player)
+              case WeatherServiceActor.PlayerExists =>
+                val err = Error(s"$player player already exists.")
                 complete(BadRequest, err)
             }*/
           }
         } /*~
           get {
             // GET /events/:event
-            onSuccess(getUsers()) {
+            onSuccess(getPlayers()) {
               _.fold(complete(NotFound))(e => complete(OK, e))
             }
           } ~
@@ -120,19 +121,19 @@ trait WeatherServiceApi {
 weatherServiceActor.ask(CreateEvent(event, nrOfTickets))
 .mapTo[EventResponse]*/
 
-  def createUser(user: User) = {
-    weatherServiceActor.ask(CreateUser).mapTo[UserResponse]
+  def createPlayer(player: Player) = {
+    weatherServiceActor.ask(CreatePlayer(player)).mapTo[PlayerResponse]
   }
 
-  def getUsers() = {
-    weatherServiceActor.ask(GetUsers).mapTo[Users]
+  def getPlayers() = {
+    weatherServiceActor.ask(GetPlayers).mapTo[Players]
   }
 
   def submitForecast(weather: Weather) =
     weatherServiceActor.ask(CreateForecast).mapTo[Result]
 
-  def getGamesResults(userId: String) =
-    weatherServiceActor.ask(GetAllResults(userId)).mapTo[Result]
+  def getGamesResults(playerId: String) =
+    weatherServiceActor.ask(GetAllResults(playerId)).mapTo[Result]
 
   /*  def getGamesResults() =
 weatherServiceActor.ask(GetEvents).mapTo[Events]

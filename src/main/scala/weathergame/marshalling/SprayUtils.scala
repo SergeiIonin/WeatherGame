@@ -2,7 +2,7 @@ package weathergame.marshalling
 
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsString, JsValue, JsonFormat}
 import weathergame.gamemechanics.Result
-import weathergame.user.{User, Users}
+import weathergame.player.{Player, Players}
 import weathergame.weather.{ForecastRequest, Weather}
 import weathergame.weather.WeatherTypes._
 
@@ -66,12 +66,12 @@ object SprayUtils {
   }
   object WeatherMarshaller extends WeatherJsonProtocol
 
-  // todo add more json supports for other types like User etc
-  trait UserJsonProtocol extends DefaultJsonProtocol {
-    implicit val user = jsonFormat2(User)
-    implicit val users = jsonFormat1(Users)
+  // todo add more json supports for other types like Player etc
+  trait PlayerJsonProtocol extends DefaultJsonProtocol {
+    implicit val player = jsonFormat2(Player)
+    implicit val players = jsonFormat1(Players)
   }
-  object UserMarshaller extends UserJsonProtocol
+  object PlayerMarshaller extends PlayerJsonProtocol
 
   trait ResultJsonProtocol extends DefaultJsonProtocol {
     implicit val result = jsonFormat6(Result)
