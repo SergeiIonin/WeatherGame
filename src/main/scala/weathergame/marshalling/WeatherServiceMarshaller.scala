@@ -2,6 +2,7 @@ package weathergame.marshalling
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
+import weathergame.weather.WeatherList
 
 trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol {
   import weathergame.gamemechanics.Result
@@ -61,11 +62,12 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
   }
   // final Weather formatter
   implicit val weather = jsonFormat6(Weather)
+  implicit val weatherList = jsonFormat1(WeatherList)
 
   implicit val forecastRequest = jsonFormat1(ForecastRequest)
 
 
-  implicit val player = jsonFormat2(Player)
+  implicit val player = jsonFormat3(Player)
   implicit val players = jsonFormat1(Players)
 
   implicit val result = jsonFormat6(Result)

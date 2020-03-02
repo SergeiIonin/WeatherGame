@@ -68,7 +68,7 @@ object SprayUtils {
 
   // todo add more json supports for other types like Player etc
   trait PlayerJsonProtocol extends DefaultJsonProtocol {
-    implicit val player = jsonFormat2(Player)
+    implicit val player = jsonFormat3(Player)
     implicit val players = jsonFormat1(Players)
   }
   object PlayerMarshaller extends PlayerJsonProtocol

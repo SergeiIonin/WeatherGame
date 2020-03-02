@@ -13,6 +13,8 @@ case class Weather(id: String = generateId,
                        wind: Option[Int] = None
                       )
 
+case class WeatherList(list: Vector[Weather])
+
 object WeatherTypes {
 
   sealed trait Precipitation
@@ -33,6 +35,7 @@ object WeatherTypes {
 
 object WeatherUtils {
   def generateId = randomUUID.toString //todo how to use method
+  def emptyForecast = Weather(id = "")
 }
 
 

@@ -16,7 +16,7 @@ class SprayUtilsSpec extends FunSpecLike {
     val weatherInst = Weather(id = "0", temperature = Some(27), precipitation = Some(NoPrecipitation()),
       sky = Some(Sunny()), wind = Some(1), humidity = Some(70))
     val weatherJson = weatherInst.toJson
-    println(weatherJson)
+    println(weatherJson.prettyPrint)
     val expectedWeatherJson = "{\"humidity\":70,\"id\":\"0\",\"precipitation\":{\"name\":\"no\"},\"sky\":{\"name\":\"sunny\"},\"temperature\":27,\"wind\":1}"
     assert(expectedWeatherJson == weatherJson.toString())
   }
