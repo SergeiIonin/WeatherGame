@@ -1,8 +1,6 @@
 package weathergame.restapi
 
 import akka.actor._
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
@@ -10,10 +8,9 @@ import akka.pattern.ask
 import akka.util.Timeout
 import weathergame.gamemechanics.Result
 import weathergame.marshalling.WeatherServiceMarshaller
-import weathergame.service.WeatherServiceActor
 import weathergame.player.{Player, Players}
+import weathergame.service.WeatherServiceActor
 import weathergame.weather.{Weather, WeatherList}
-import weathergame.weather.WeatherTypes.Rain
 
 import scala.concurrent.ExecutionContext
 
@@ -43,7 +40,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
         get {
           // GET /players
           onSuccess(getPlayers()) { players: Players =>
-            complete(OK , players)
+            complete(OK, players)
           }
         }
       }
@@ -72,6 +69,43 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
       }
     }
 
+  /*// fixme TEMP
+  def forecastsRoute =
+    pathPrefix("forecasts") {
+      pathEndOrSingleSlash {
+        get {
+          // GET /forecasts
+          onSuccess(getForecasts()) { forecasts =>
+            complete(OK, forecasts)
+          }
+        }
+      }
+    }
+
+  def forecastRoute =
+    pathPrefix("forecasts" / Segment) { forecastId =>
+      pathEndOrSingleSlash {
+        post {
+          // POST /forecasts/:forecast
+          entity(as[Weather]) { weather: Weather =>
+            onSuccess(submitForecast(weather)) {
+              case WeatherServiceActor.ForecastCreated(weather.id, weather) => complete(Created, weather)
+              case WeatherServiceActor.ForecastFailedToBeCreated(weather.id) => complete(NoContent)
+              case WeatherServiceActor.ForecastExists =>
+                val err = Error(s"${forecastId} player already exists.")
+                complete(BadRequest, err)
+            }
+          }
+        } ~ get {
+          // GET /forecasts/:forecast
+          onSuccess(getForecast(forecastId)) { forecast: Weather =>
+            complete(OK, forecast)
+          }
+        }
+      }
+    }*/
+
+  // todo add this
   def forecastRoute =
     pathPrefix("players" / Segment) { _ =>
       path("forecasts" / Segment) { forecastId =>
@@ -99,15 +133,15 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
 
   def forecastsRoute =
     pathPrefix("players" / Segment) { _ =>
-      path("forecasts") { /*_ =>
-         pathEndOrSingleSlash {*/
+      path("forecasts") {
         pathEndOrSingleSlash {
-          get {
-            // GET /players/:player/forecasts
-            onSuccess(getForecasts()) { forecasts =>
-              complete(OK, forecasts)
+          pathEndOrSingleSlash {
+            get {
+              // GET /players/:player/forecasts
+              onSuccess(getForecasts()) { forecasts =>
+                complete(OK, forecasts)
+              }
             }
-            //}
           }
         }
       }
@@ -152,8 +186,7 @@ weatherServiceActor.ask(CreateEvent(event, nrOfTickets))
     }
 
     def getForecasts() = {
-      weatherServiceActor.ask(GetForecasts).mapTo[WeatherList] // fixme temp thingy
-      //weatherServiceActor.ask(GetForecasts).mapTo[WeatherList]
+      weatherServiceActor.ask(GetForecasts).mapTo[WeatherList]
     }
 
     def getGamesResults(playerId: String) = {

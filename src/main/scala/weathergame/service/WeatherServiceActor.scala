@@ -43,6 +43,10 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
   import WeatherServiceActor._
   import context._
 
+  var weatherActorsMap = Map.empty[String, ActorRef]
+  var playerActorsMap = Map.empty[String, ActorRef]
+
+
   def createWeatherCalculatorActor(name: String) =
     context.actorOf(WeatherCalculatorActor.props(name), name)
 
@@ -59,6 +63,7 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
         if (!players.contains(newLogin)) {
           players += newLogin
           val playerActor = createPlayerActor(newLogin)
+          playerActorsMap += (newLogin -> playerActor)
           playerActor ! PlayersActor.Add(player)
           log.info(s"ready to send PlayerCreated to sender() ${sender()}")
           sender() ! PlayerCreated(newLogin)
@@ -79,14 +84,14 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
       def notFound() = sender() ! None
       def getPlayer(child: ActorRef) = child forward PlayersActor.GetPlayer(login)
 
-      context.child(login).fold(notFound())(getPlayer)
+      playerActorsMap.get(login).fold(notFound())(getPlayer)
     }
     case GetPlayers => {
       import akka.pattern.ask
       import akka.pattern.pipe
 
-      def getPlayers = context.children.map { child =>
-        self.ask(GetPlayer(child.path.name)).mapTo[Player]
+      def getPlayers = playerActorsMap.toList.map {
+        case (name, actorRef) => actorRef.ask(GetPlayer(name)).mapTo[Player]
       }
       def convertToPlayers(f: Future[Iterable[Player]]) =
         f.map(l => Players(l.toVector))
@@ -99,6 +104,7 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
       def create() = {
         log.info(s"ready to create WeatherCalculatorActor $name")
         val weatherCalculatorActor = createWeatherCalculatorActor(name)
+        weatherActorsMap += (name -> weatherCalculatorActor)
         weatherCalculatorActor ! WeatherCalculatorActor.Calculate(forecast)
         sender() ! ForecastCreated(name, forecast)
       }
@@ -108,19 +114,23 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
       def notFound() = sender() ! None
       def getForecast(child: ActorRef) = child forward WeatherCalculatorActor.GetForecast(id)
 
-      context.child(id).fold(notFound())(getForecast)
+      weatherActorsMap.get(id).fold(notFound())(getForecast)
     }
     case GetForecasts => {
       import akka.pattern.ask
       import akka.pattern.pipe
 
-      def getForecasts = context.children.map { child =>
-        self.ask(GetForecast(child.path.name)).mapTo[Weather]
+      def getForecasts = weatherActorsMap.toList.map {
+        case (name, actorRef) => actorRef.ask(GetForecast(name)).mapTo[Weather]
       }
       def convertToForecasts(f: Future[Iterable[Weather]]) =
         f.map(l => WeatherList(l.toVector))
       log.info(s"before piping to sender")
-      //pipe(convertToForecasts(Future.sequence(getForecasts))) to sender()
+      pipe(convertToForecasts(Future.sequence(getForecasts))) to sender()
+
+      // fixme temp uri http://localhost:5000/forecasts
+      // normal uri http://localhost:5000/players/ronaldo/forecasts/for1
+
       /*  val r = convertToForecasts(Future.sequence(getForecasts))
         val rOnComp = r onComplete {
           case Success(forecasts: WeatherList) => log.info(s"ready to pipe forecasts list $forecasts to sender")
@@ -129,8 +139,8 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
         pipe(r) to sender()*/
 
       // fixme STUB!!!
-      val forecasts = Future.apply(Iterable.single(WeatherUtils.emptyForecast))
-      pipe(convertToForecasts(forecasts)) to sender()
+  /*    val forecasts = Future.apply(Iterable.single(WeatherUtils.emptyForecast))
+      pipe(convertToForecasts(forecasts)) to sender()*/
 
       // fixme STUB!!!
       /*def notFound() = sender() ! None
