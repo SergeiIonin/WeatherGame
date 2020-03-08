@@ -31,11 +31,6 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
 
   def routes: Route = playersRoute ~ playerRoute ~ forecastsRoute ~ forecastRoute // todo ~ resultsRoute ~ forecastsRoute
 
-  implicit val plr = jsonFormat3(Player)
-  implicit val plrs = jsonFormat1(Players)
-  implicit val wthr = jsonFormat6(Weather)
-  implicit val wthrList = jsonFormat1(WeatherList)
-
   def playersRoute =
     pathPrefix("players") {
       pathEndOrSingleSlash {
