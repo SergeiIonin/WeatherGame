@@ -1,10 +1,7 @@
 package weathergame.player
 
 import akka.actor.{Actor, ActorLogging, Props}
-import weathergame.calculator.WeatherCalculatorActor.Calculate
-import weathergame.gamemechanics.Result
 import weathergame.player.PlayersActor.{Add, GetPlayer}
-import weathergame.weather.Weather
 
 object PlayersActor {
 
@@ -23,6 +20,7 @@ object PlayersActor {
 class PlayersActor(name: String) extends Actor with ActorLogging {
 
   var players = Map.empty[String, Player] // player can submit several forecasts
+  var forecasts = Set.empty[String]
   //var results = Map.empty[String, Result]
 
   override def receive: Receive = {
