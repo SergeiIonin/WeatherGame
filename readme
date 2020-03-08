@@ -1,35 +1,52 @@
 Main concepts
 
-1) Forecast - a user guess for the weather (the forecast is applicable at least 1 day before the goal-date
- and is matched upon the weather in that goal-date)
+1) Forecast - a user guess for the weather (the forecast is applicable at least 1 day before the target-date
+ and is matched upon the weather in that target-date)
  Forecast consists of
   1.1. temperature (temperatureForecast)
   1.2. precipitation (precipitationForecast)
   1.3. sky (skyForecast)
   1.4. humidity (humidityForecast)
+  1.5. wind
 
-2) Reality - same as forecast, but related to the actual weather
+2) RealWeather - same as forecast, but related to the actual weather
+NB! Forecast and RealWeather are both described by Weather case class
 
 3) Game - a single forecast
 
-4) The comparison between Forecast and Reality is implemented by the relevant type class instances
+4) WIP The comparison between Forecast and RealWeather is implemented by the relevant type class instances
 
 5) REST endpoints:
-        GET:
-            /user/{login}/games - get all user's games
-            /user/{login}/{game-id} - get user's specific games (is it so needed???)
-            /raiting
-           external:
-            get weather by location (WIP)
         POST:
-            /user/{game-id}
-        DELETE:
-            /user/{game-id}
+        /players/{login}
+        /players/{login}/forecasts/{forecast-id}
 
+        GET:
+        /players/{login}
+        /players
+        /players/{login}/forecasts
+        /players/{login}/forecasts/{forecast-id}
+        /raiting - get user's raiting
+
+
+        POST:
+        /players/{login}
+        /user/{game-id} - post game by id
+
+        DELETE:
+        /players/{login}
+        /players/{login}/forecasts/{forecast-id}
+
+       WIP external:
+        get weather by location
             https://samples.openweathermap.org/data/2.5/weather?q=
             https://samples.openweathermap.org/data/2.5/weather?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22
 
-6) Mongo collections
+6) When we request some forecast by forecast-id, the actor WeatherServiceActor checks that the relevant forecast
+contained in the map playersForecastsMap (var playersForecastsMap = Map.empty[String, mutable.ListBuffer[String]])
+and when one send either request for forecast, the relevant player's login is provided
+
+7) Mongo collections
     User
     Raiting
     Game

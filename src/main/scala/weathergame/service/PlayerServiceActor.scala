@@ -31,7 +31,6 @@ object PlayerServiceActor {
 
 }
 
-
 class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging {
 
   import PlayerServiceActor._
@@ -53,7 +52,6 @@ class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogg
         if (!players.contains(newLogin)) {
           players += newLogin
           val playerActor = createPlayerActor(newLogin)
-          playerActorsMap += (newLogin -> playerActor) // fixme should be removed, not sure if it will always work
           playerActor ! PlayersActor.Add(player)
           log.info(s"ready to send PlayerCreated to sender() ${sender()}")
           sender() ! PlayerCreated(newLogin)
@@ -69,8 +67,6 @@ class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogg
       def getPlayer(child: ActorRef) = child forward PlayersActor.GetPlayer(login)
 
       context.child(login).fold(notFound())(getPlayer)
-      //system.
-      //playerActorsMap.get(login).fold(notFound())(getPlayer)
     }
     case GetPlayers => {
       import akka.pattern.{ask, pipe}

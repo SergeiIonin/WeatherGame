@@ -2,15 +2,12 @@ package weathergame.service
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
-import akka.pattern.ask
 import weathergame.calculator.WeatherCalculatorActor
-import weathergame.player.{Player, Players, PlayersActor}
 import weathergame.weather.{Weather, WeatherList, WeatherUtils}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 object WeatherServiceActor {
   def props(implicit timeout: Timeout) = Props(new WeatherServiceActor)
@@ -18,9 +15,8 @@ object WeatherServiceActor {
   def name = "weatherService"
 
   // weather protocol
-  case class CreateForecast(forecast: Weather,  login: String) // just one forecast could be created
-  case class GetForecast(forecastId: String,  login: String)
-
+  case class CreateForecast(forecast: Weather, login: String) // just one forecast could be created
+  case class GetForecast(forecastId: String, login: String)
   case class GetForecasts(login: String)
 
   case class GetResult(forecastId: String)
@@ -66,7 +62,9 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
     }
     case GetForecast(id, login) => {
       def notFound() = sender() ! None
+
       def sendEmpty() = sender() ! WeatherUtils.emptyForecast
+
       def getForecast(child: ActorRef) = child forward WeatherCalculatorActor.GetForecast(id)
 
       playersForecastsMap.get(login) match {
@@ -79,11 +77,19 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
       }
     }
     case GetForecasts(login) => {
-      import akka.pattern.ask
-      import akka.pattern.pipe
+      import akka.pattern.{ask, pipe}
 
-      def getForecasts = context.children.map { child =>
-        self.ask(GetForecast(child.path.name, login)).mapTo[Weather]
+      def getForecasts = context.children collect {
+        case child if isForecastApplicableToPlayer(child.path.name) =>
+          self.ask(GetForecast(child.path.name, login)).mapTo[Weather]
+      }
+
+      def isForecastApplicableToPlayer(forecastId: String) = {
+        playersForecastsMap.get(login) match {
+          case forecasts@Some(ListBuffer(_*)) =>
+            forecasts.get.contains(forecastId)
+          case None => false
+        }
       }
 
       def convertToForecasts(f: Future[Iterable[Weather]]) =

@@ -13,7 +13,6 @@ object PlayersActor {
   case class Add(player: Player)
   case class GetPlayer(login: String)
   case class Delete(id: String)
-  //case class GetRealWeather(reality: Weather) // will interact with openweather API
 
 }
 
@@ -21,7 +20,7 @@ class PlayersActor(name: String) extends Actor with ActorLogging {
 
   var players = Map.empty[String, Player] // player can submit several forecasts
   var forecasts = Set.empty[String]
-  //var results = Map.empty[String, Result]
+  //var results = Map.empty[String, Result] // todo results will have a map to link player's login and result
 
   override def receive: Receive = {
     case Add(player) => {

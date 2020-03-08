@@ -29,7 +29,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
 
   import StatusCodes._
 
-  def routes: Route = playersRoute ~ playerRoute ~ forecastsRoute ~ forecastRoute //~ resultsRoute ~ forecastsRoute
+  def routes: Route = playersRoute ~ playerRoute ~ forecastsRoute ~ forecastRoute // todo ~ resultsRoute ~ forecastsRoute
 
   implicit val plr = jsonFormat3(Player)
   implicit val plrs = jsonFormat1(Players)
@@ -71,8 +71,6 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
       }
     }
 
-  ////////////
-
   def forecastsRoute =
     pathPrefix("players" / Segment) { login => // does this pathPrefix required??
       path("forecasts") {
@@ -92,7 +90,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
       path("forecasts" / Segment) { forecastId =>
         pathEndOrSingleSlash {
           post {
-            // POST /players/:player/forecasts/:forecast
+            // POST /players/:player/forecasts/:forecast-id
             entity(as[Weather]) { weather: Weather =>
               onSuccess(submitForecast(weather, login)) {
                 case WeatherServiceActor.ForecastCreated(weather.id, weather) => complete(Created, weather)
@@ -103,7 +101,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
               }
             }
           } ~ get {
-            // GET /players/:player/forecasts/:forecast
+            // GET /players/:player/forecasts/:forecast-id
             onSuccess(getForecast(forecastId, login)) { forecast: Weather =>
               complete(OK, forecast)
             }
@@ -111,7 +109,6 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
         }
       }
     }
-
 
 }
 
@@ -130,10 +127,7 @@ trait WeatherServiceApi {
   lazy val weatherServiceActor = createWeatherServiceActor()
   lazy val playerServiceActor = createPlayerServiceActor()
 
-  /*  def createGame(event: String) =
-weatherServiceActor.ask(CreateEvent(event, nrOfTickets))
-.mapTo[EventResponse]*/
-
+  // players
   def createPlayer(player: Player) = {
     playerServiceActor.ask(CreatePlayer(player)).mapTo[PlayerResponse]
   }
@@ -146,8 +140,7 @@ weatherServiceActor.ask(CreateEvent(event, nrOfTickets))
     playerServiceActor.ask(GetPlayers).mapTo[Players]
   }
 
-  ///////////////
-
+  //forecasts
   def submitForecast(weather: Weather, login: String) = {
     weatherServiceActor.ask(CreateForecast(weather, login)).mapTo[ForecastResponse] // was a headache when param weather was skipped in CreateForecast()
   }
@@ -176,4 +169,3 @@ weatherServiceActor.ask(GetTickets(event, tickets))
 .mapTo[TicketSeller.Tickets]*/
 }
 
-//
