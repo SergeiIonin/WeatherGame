@@ -1,7 +1,7 @@
 package weathergame.calculator
 
 import akka.actor.{Actor, ActorLogging, Props}
-import weathergame.calculator.WeatherCalculatorActor.{Calculate, GetForecast}
+import weathergame.calculator.WeatherCalculatorActor.{AddForecast, GetForecast, GetRealWeather, RealWeather}
 import weathergame.weather.{Weather, WeatherUtils}
 
 object WeatherCalculatorActor {
@@ -11,26 +11,37 @@ object WeatherCalculatorActor {
   /**
    *
    * */
-  case class Calculate(forecast: Weather)
-  case class GetRealWeather(reality: Weather) // will interact with openweather API
-  case class GetForecast(id: String)
+  case class AddForecast(forecast: Weather)
+  case class GetForecast(`forecast-id`: String)
+  case class GetRealWeather(`forecast-id`: String) // will interact with openweather API
+  case class RealWeather(realWeather: Weather, `forecast-id`: String)
 
 }
 
 class WeatherCalculatorActor(name: String) extends Actor with ActorLogging {
 
-  var forecasts = Map.empty[String, Weather]
+  var forecastsMap = Map.empty[String, Weather]
+  var realWeatherMap = Map.empty[String, Weather]
+  var results = Map.empty[String, Weather]
 
   override def receive: Receive = {
-    case Calculate(forecast) => {
+    case AddForecast(forecast) => {
       log.info(s"will add forecast $forecast")
-      forecasts += (forecast.id -> forecast)
-     /* val newResult = Result(89.0, 64.0, 90.0, 1, 2, 85.0) // stub
-      results += (forecast.id -> newResult)*/
+      forecastsMap += (forecast.id -> forecast)
+      val weatherResultActor = context.actorOf(WeatherResultActor.props(forecast.id), forecast.id)
+      weatherResultActor ! WeatherResultActor.GetRealWeatherAPI(forecast)
     }
-    case GetForecast(id) => {
+    case GetForecast(forecastId) => {
       log.info(s"sending forecast info to sender ${sender()}")
-      sender() ! forecasts.getOrElse(id, WeatherUtils.emptyForecast)
+      sender() ! forecastsMap.getOrElse(forecastId, WeatherUtils.emptyWeather)
+    }
+
+    case RealWeather(realWeather, forecastId) => {
+      realWeatherMap += (forecastId -> realWeather)
+      // fixme calculate result then!
+    }
+    case GetRealWeather(forecastId) => {
+     sender() ! realWeatherMap.getOrElse(forecastId, WeatherUtils.emptyWeather)
     }
   }
 

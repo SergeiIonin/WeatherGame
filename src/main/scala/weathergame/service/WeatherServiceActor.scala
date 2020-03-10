@@ -54,7 +54,7 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
           playersForecastsMap.get(login).map(forecasts => forecasts.addOne(forecastName))
         }
         else playersForecastsMap += (login -> ListBuffer(forecastName))
-        weatherCalculatorActor ! WeatherCalculatorActor.Calculate(forecast)
+        weatherCalculatorActor ! WeatherCalculatorActor.AddForecast(forecast)
         sender() ! ForecastCreated(forecastName, forecast)
       }
 
@@ -63,7 +63,7 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
     case GetForecast(id, login) => {
       def notFound() = sender() ! None
 
-      def sendEmpty() = sender() ! WeatherUtils.emptyForecast
+      def sendEmpty() = sender() ! WeatherUtils.emptyWeather
 
       def getForecast(child: ActorRef) = child forward WeatherCalculatorActor.GetForecast(id)
 

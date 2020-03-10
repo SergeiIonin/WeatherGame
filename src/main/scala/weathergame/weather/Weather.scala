@@ -41,7 +41,7 @@ object WeatherTypes {
 
 object WeatherUtils {
   def generateId = randomUUID.toString //todo how to use method
-  def emptyForecast = Weather(id = "")
+  def emptyWeather = Weather(id = "")
 }
 
 
