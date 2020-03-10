@@ -60,17 +60,15 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
       case _ => throw DeserializationException("Object expected")
     }
   }
-  // final Weather formatter
-  implicit val weather = jsonFormat6(Weather)
-  implicit val weatherList = jsonFormat1(WeatherList)
-
-  implicit val forecastRequest = jsonFormat1(ForecastRequest)
-
-
-  implicit val player = jsonFormat3(Player)
-  implicit val players = jsonFormat1(Players)
-
+  // final Weather formatters
+  implicit val wthr = jsonFormat6(Weather)
+  implicit val wthrList = jsonFormat1(WeatherList)
   implicit val result = jsonFormat6(Result)
+
+  // player formatters
+  implicit val plr = jsonFormat3(Player)
+  implicit val plrs = jsonFormat1(Players)
+  implicit val forecastRequest = jsonFormat1(ForecastRequest)
 
   case class Error(message: String)
 
