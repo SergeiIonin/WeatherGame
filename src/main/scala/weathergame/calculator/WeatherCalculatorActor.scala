@@ -1,7 +1,7 @@
 package weathergame.calculator
 
 import akka.actor.{Actor, ActorLogging, Props}
-import weathergame.calculator.WeatherCalculatorActor.{AddForecast, GetForecast, GetRealWeather, RealWeather}
+import weathergame.calculator.WeatherCalculatorActor.{AddForecast, GetForecast, GetRealWeather, AddRealWeather}
 import weathergame.weather.{Weather, WeatherUtils}
 
 object WeatherCalculatorActor {
@@ -14,7 +14,7 @@ object WeatherCalculatorActor {
   case class AddForecast(forecast: Weather)
   case class GetForecast(`forecast-id`: String)
   case class GetRealWeather(`forecast-id`: String) // will interact with openweather API
-  case class RealWeather(realWeather: Weather, `forecast-id`: String)
+  case class AddRealWeather(realWeather: Weather, `forecast-id`: String)
 
 }
 
@@ -36,9 +36,10 @@ class WeatherCalculatorActor(name: String) extends Actor with ActorLogging {
       sender() ! forecastsMap.getOrElse(forecastId, WeatherUtils.emptyWeather)
     }
 
-    case RealWeather(realWeather, forecastId) => {
+    case AddRealWeather(realWeather, forecastId) => {
       realWeatherMap += (forecastId -> realWeather)
       // fixme calculate result then!
+
     }
     case GetRealWeather(forecastId) => {
      sender() ! realWeatherMap.getOrElse(forecastId, WeatherUtils.emptyWeather)

@@ -1,6 +1,9 @@
 package weathergame.gamemechanics
 
-import weathergame.weather.Weather
+import weathergame.weather.{Weather, WeatherUtils}
+import cats.instances.int
+import cats.instances.int
+import cats.kernel.Eq
 
 object ResultCalculator {
   case class Result(temperatureAccuracy: Double,
@@ -11,9 +14,9 @@ object ResultCalculator {
                     totalScore: Double) {
     // todo create instances of the Comparable type class
     def compare(forecast: Weather, reality: Weather) = {
-      val temperatureDiff = ???
-
-      /** this should be a difference between 2 temp-s, but one doesn't
+      WeatherUtils.diff(forecast, reality)
+      //val result = (forecast.productElementNames zip forecast.productIterator).map()
+      /** this should be a ifference between 2 temp-s, but one doesn't
     want to write a code sorta
     forecast.temperature match {
     case Some(temperatureForecast) => reality match {
