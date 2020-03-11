@@ -1,7 +1,9 @@
 package weathergame.calculator
 
 import akka.actor.{Actor, ActorLogging, Props}
-import weathergame.calculator.WeatherCalculatorActor.{AddForecast, GetForecast, GetRealWeather, AddRealWeather}
+import weathergame.calculator.WeatherCalculatorActor.{AddForecast, AddResult, GetForecast, GetRealWeather}
+import weathergame.gamemechanics.ResultCalculator
+import weathergame.gamemechanics.ResultCalculator.Result
 import weathergame.weather.{Weather, WeatherUtils}
 
 object WeatherCalculatorActor {
@@ -14,7 +16,7 @@ object WeatherCalculatorActor {
   case class AddForecast(forecast: Weather)
   case class GetForecast(`forecast-id`: String)
   case class GetRealWeather(`forecast-id`: String) // will interact with openweather API
-  case class AddRealWeather(realWeather: Weather, `forecast-id`: String)
+  case class AddResult(realWeather: Weather, `forecast-id`: String)
 
 }
 
@@ -22,7 +24,7 @@ class WeatherCalculatorActor(name: String) extends Actor with ActorLogging {
 
   var forecastsMap = Map.empty[String, Weather]
   var realWeatherMap = Map.empty[String, Weather]
-  var results = Map.empty[String, Weather]
+  var resultsMap = Map.empty[String, Result]
 
   override def receive: Receive = {
     case AddForecast(forecast) => {
@@ -36,10 +38,11 @@ class WeatherCalculatorActor(name: String) extends Actor with ActorLogging {
       sender() ! forecastsMap.getOrElse(forecastId, WeatherUtils.emptyWeather)
     }
 
-    case AddRealWeather(realWeather, forecastId) => {
+    case AddResult(realWeather, forecastId) => {
       realWeatherMap += (forecastId -> realWeather)
       // fixme calculate result then!
-
+      val res: Result = ResultCalculator.compare(forecastsMap(forecastId), realWeather)
+      resultsMap += (forecastId -> res)
     }
     case GetRealWeather(forecastId) => {
      sender() ! realWeatherMap.getOrElse(forecastId, WeatherUtils.emptyWeather)

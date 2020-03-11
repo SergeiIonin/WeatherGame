@@ -23,7 +23,7 @@ class WeatherResultActor(name: String) extends Actor with ActorLogging {
       // fixme this is a stub!!!
       val newRealWeather = Weather(temperature = Some(27), precipitation = Some(NoPrecipitation()),
         sky = Some(Sunny()), wind = Some(1), humidity = Some(70))
-      sender() ! WeatherCalculatorActor.AddRealWeather(newRealWeather, forecast.id)
+      sender() ! WeatherCalculatorActor.AddResult(newRealWeather, forecast.id)
     }
   }
 

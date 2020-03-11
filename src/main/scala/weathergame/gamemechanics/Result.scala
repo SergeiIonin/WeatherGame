@@ -1,22 +1,55 @@
 package weathergame.gamemechanics
 
-import weathergame.weather.{Weather, WeatherUtils}
-import cats.instances.int
-import cats.instances.int
-import cats.kernel.Eq
+import weathergame.weather.{Weather, WeatherDifference, WeatherUtils}
 
 object ResultCalculator {
-  case class Result(temperatureAccuracy: Double,
-                    humidityAccuracy: Double,
-                    windAccuracy: Double,
-                    skyAccuracy: Int,
-                    precipitationAccuracy: Int,
-                    totalScore: Double) {
-    // todo create instances of the Comparable type class
+
+  type Result = Int
+
     def compare(forecast: Weather, reality: Weather) = {
-      WeatherUtils.diff(forecast, reality)
-      //val result = (forecast.productElementNames zip forecast.productIterator).map()
-      /** this should be a ifference between 2 temp-s, but one doesn't
+      val difference: WeatherDifference = WeatherUtils.diff(forecast, reality)
+      differenceToScore(difference)
+    }
+
+    private def differenceToScore(difference: WeatherDifference) = {
+      temperatureDifferenceToScore(difference.temperatureDiff) +
+        humidityDifferenceToScore(difference.humidityDiff) +
+        windDifferenceToScore(difference.windDiff) +
+        precipitationDifferenceToScore(difference.precipitationDiff) +
+        skyDifferenceToScore(difference.skyDiff)
+    }
+
+    private def temperatureDifferenceToScore(difference: Option[Int]) = difference match {
+      case Some(diff) => if (diff.abs <= 10) {
+        10 - diff.abs
+      } else 0
+      case None => 0
+    }
+
+    private def humidityDifferenceToScore(difference: Option[Int]) = difference match {
+      case Some(diff) => if (diff.abs <= 30) {
+        10 - diff.abs % 3
+      } else 0
+      case None => 0
+    }
+
+    private def windDifferenceToScore(difference: Option[Int]) = difference match {
+      case Some(diff) => if (diff.abs <= 5) {
+        10 - diff.abs * 2
+      } else 0
+      case None => 0
+    }
+
+    private def precipitationDifferenceToScore(difference: Boolean) = {
+      if (difference) 5 else 0
+    }
+
+    private def skyDifferenceToScore(difference: Boolean) = {
+      if (difference) 5 else 0
+    }
+
+  // todo create instances of the Comparable type class
+  /** this should be a difference between 2 temp-s, but one doesn't
     want to write a code sorta
     forecast.temperature match {
     case Some(temperatureForecast) => reality match {
@@ -27,10 +60,5 @@ object ResultCalculator {
     }
     but to use smth from cats instead, in order to write only temperatureForecast - temperatureReality
     and if smth is None, just return None without verbosity
-       * */
-    }
-
-    //case class Result(forecast: Weather, reality: Weather)
-
-  }
+     * */
 }
