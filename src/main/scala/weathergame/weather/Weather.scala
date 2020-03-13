@@ -31,6 +31,8 @@ object WeatherTypes {
 
   sealed trait Sky extends WeatherADT
 
+  case class NoSky(name: String = "no") extends Sky
+
   case class Sunny(name: String = "sunny") extends Sky
 
   case class Cloudy(name: String = "cloudy") extends Sky
@@ -45,28 +47,6 @@ object WeatherUtils {
   def generateId = randomUUID.toString //todo how to use method
 
   def emptyWeather = Weather(id = "")
-
-  def diff(weatherL :Weather, weatherR: Weather): WeatherDifference = {
-    WeatherDifference(
-      diffInts(weatherL.temperature, weatherR.temperature),
-      diffWeatherADT(weatherL.precipitation, weatherR.precipitation),
-      diffWeatherADT(weatherL.sky, weatherR.sky),
-      diffInts(weatherL.humidity, weatherR.humidity),
-      diffInts(weatherL.wind, weatherR.wind)
-    )
-  }
-
-  private def diffInts(optionL: Option[Int], optionR: Option[Int]) = {
-    if (optionL.isDefined && optionR.isDefined) {
-      Some(optionL.get - optionR.get)
-    } else None
-  }
-
-  private def diffWeatherADT[T <: WeatherADT](optionL: Option[T], optionR: Option[T]) = {
-    if (optionL.isDefined && optionR.isDefined) {
-      optionL.get == optionR.get
-    } else false
-  }
 }
 
 

@@ -41,7 +41,7 @@ class WeatherCalculatorActor(name: String) extends Actor with ActorLogging {
     case AddResult(realWeather, forecastId) => {
       realWeatherMap += (forecastId -> realWeather)
       // fixme calculate result then!
-      val res: Result = ResultCalculator.compare(forecastsMap(forecastId), realWeather)
+      val res: Result = ResultCalculator.differenceToResult(forecastsMap(forecastId), realWeather)
       resultsMap += (forecastId -> res)
     }
     case GetRealWeather(forecastId) => {

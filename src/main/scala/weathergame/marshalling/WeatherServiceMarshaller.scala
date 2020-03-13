@@ -5,7 +5,6 @@ import spray.json._
 import weathergame.weather.WeatherList
 
 trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol {
-  import weathergame.gamemechanics.Result
   import weathergame.weather.WeatherTypes._
   import weathergame.weather.{ForecastRequest, Weather}
   import weathergame.player.{Player, Players}
@@ -63,7 +62,6 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
   // final Weather formatters
   implicit val wthr = jsonFormat6(Weather)
   implicit val wthrList = jsonFormat1(WeatherList)
-  implicit val result = jsonFormat6(Result)
 
   // player formatters
   implicit val plr = jsonFormat3(Player)

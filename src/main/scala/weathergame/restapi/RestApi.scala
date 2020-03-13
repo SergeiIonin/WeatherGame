@@ -6,7 +6,6 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.pattern.ask
 import akka.util.Timeout
-import weathergame.gamemechanics.Result
 import weathergame.marshalling.WeatherServiceMarshaller
 import weathergame.player.{Player, Players}
 import weathergame.service.PlayerServiceActor.{CreatePlayer, GetPlayer, GetPlayers, PlayerResponse}
@@ -148,9 +147,9 @@ trait WeatherServiceApi {
     weatherServiceActor.ask(GetForecasts(login)).mapTo[WeatherList] // todo GetForecasts(login)
   }
 
-  def getGamesResults(login: String) = {
+ /* def getGamesResults(login: String) = {
     weatherServiceActor.ask(GetAllResults(login)).mapTo[Result]
-  }
+  }*/
 
   /*  def getGamesResults() =
 weatherServiceActor.ask(GetEvents).mapTo[Events]
