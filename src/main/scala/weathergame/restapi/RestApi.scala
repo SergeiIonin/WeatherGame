@@ -104,6 +104,45 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
       }
     }
 
+  def resultsRoute =
+    pathPrefix("players" / Segment) { login => // does this pathPrefix required??
+      path("results") {
+        pathEndOrSingleSlash {
+          get {
+            // GET /players/:player/results
+            onSuccess(getForecasts(login)) { results =>
+              complete(OK, results)
+            }
+          }
+        }
+      }
+    }
+
+  def resultRoute =
+  pathPrefix("players" / Segment) { login =>
+      path("results" / Segment) { forecastId =>
+        pathEndOrSingleSlash {
+          post {
+            // POST /players/:player/results/:forecast-id
+            entity(as[Weather]) { weather: Weather =>
+              onSuccess(submitForecast(weather, login)) {
+                case WeatherServiceActor.ForecastCreated(weather.id, weather) => complete(Created, weather)
+                case WeatherServiceActor.ForecastFailedToBeCreated(weather.id) => complete(NoContent)
+                case WeatherServiceActor.ForecastExists =>
+                  val err = Error(s"${forecastId} player already exists.")
+                  complete(BadRequest, err)
+              }
+            }
+          } ~ get {
+            // GET /players/:player/results/:forecast-id
+            onSuccess(getForecast(forecastId, login)) { forecast: Weather =>
+              complete(OK, forecast)
+            }
+          }
+        }
+      }
+    }
+
 }
 
 trait WeatherServiceApi {

@@ -8,6 +8,8 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
   import weathergame.weather.WeatherTypes._
   import weathergame.weather.{ForecastRequest, Weather}
   import weathergame.player.{Player, Players}
+  import weathergame.gamemechanics.ResultCalculator.Result
+
   // formatters related to sky
   implicit val sunny = jsonFormat1(Sunny)
   implicit val cloudy = jsonFormat1(Cloudy)
@@ -71,5 +73,8 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
   case class Error(message: String)
 
   implicit val errorFormat = jsonFormat1(Error)
+
+  // result formatter
+  implicit val rslt = jsonFormat2(Result)
 }
 

@@ -2,18 +2,19 @@ package weathergame.gamemechanics
 
 import weathergame.weather.Weather
 import weathergame.weather.WeatherTypes.{Precipitation, Sky}
+import weathergame.gamemechanics.ResultCalculator.Result
 
 trait DifferenceToResultMapper[U] {
 
-  def toResult(u: U): Int
+  def toResult(u: U): Result
 
 }
 
 object DifferenceToResultMapperInstances {
 
   implicit val weatherDifferenceToResultMapper: DifferenceToResultMapper[Weather] =
-    (weather: Weather) => temperatureDiffToScore(weather.temperature) + humidityDiffToScore(weather.humidity) +
-    windDiffToScore(weather.wind) + precDiffToScore(weather.precipitation) + skyDiffToScore(weather.sky)
+    (weather: Weather) => Result(weather.id, temperatureDiffToScore(weather.temperature) + humidityDiffToScore(weather.humidity) +
+      windDiffToScore(weather.wind) + precDiffToScore(weather.precipitation) + skyDiffToScore(weather.sky))
 
   private def temperatureDiffToScore(difference: Option[Int]) = difference match {
     case Some(diff) => if (diff.abs <= 10) {
@@ -24,7 +25,7 @@ object DifferenceToResultMapperInstances {
 
   private def humidityDiffToScore(difference: Option[Int]) = difference match {
     case Some(diff) => if (diff.abs <= 30) {
-      10 - diff.abs % 3
+      10 - diff.abs / 3
     } else 0
     case None => 0
   }

@@ -3,6 +3,14 @@ package weathergame.gamemechanics
 import weathergame.weather.Weather
 import weathergame.weather.WeatherTypes.{NoPrecipitation, NoSky, Precipitation, Sky, WeatherADT}
 
+/**
+ * This type class serves for enrichment of behaviour of Weather c.c. in the
+ * way of allowing to use operations like "+" and "-" for instances of Weather,
+ * taking into account possible None values of any field (e.g. Some(26) + None = None)
+ *
+ * The above will be advantageous when comparing forecast and real weather
+ * */
+
 trait Substractable[T] {
 
   def +(t1: T, t2: T): T
