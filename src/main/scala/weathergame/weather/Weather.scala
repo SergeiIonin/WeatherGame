@@ -10,7 +10,9 @@ case class Weather(id: String = generateId,
                    precipitation: Option[Precipitation] = None,
                    sky: Option[Sky] = None,
                    humidity: Option[Int] = None,
-                   wind: Option[Int] = None
+                   wind: Option[Int] = None,
+                   date: Option[String] = None,
+                   location: Option[String] = None
                   )
 
 case class WeatherList(list: Vector[Weather])

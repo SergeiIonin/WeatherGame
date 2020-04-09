@@ -62,7 +62,7 @@ trait WeatherServiceMarshaller extends SprayJsonSupport with DefaultJsonProtocol
     }
   }
   // final Weather formatters
-  implicit val wthr = jsonFormat6(Weather)
+  implicit val wthr = jsonFormat8(Weather)
   implicit val wthrList = jsonFormat1(WeatherList)
 
   // player formatters

@@ -83,7 +83,10 @@ object SubstractableInstances {
       Substractable.+(w1.precipitation, w2.precipitation),
       Substractable.+(w1.sky, w2.sky),
       Substractable.+(w1.humidity, w2.humidity),
-      Substractable.+(w1.wind, w2.wind))
+      Substractable.+(w1.wind, w2.wind),
+      Substractable.+(w1.date, w2.date),
+      Substractable.+(w1.location, w2.location)
+    )
 
     override def -(w1: Weather, w2: Weather): Weather = Weather(
       Substractable.-(w1.id, w2.id),
@@ -91,7 +94,9 @@ object SubstractableInstances {
       Substractable.-(w1.precipitation, w2.precipitation),
       Substractable.-(w1.sky, w2.sky),
       Substractable.-(w1.humidity, w2.humidity),
-      Substractable.-(w1.wind, w2.wind))
+      Substractable.-(w1.wind, w2.wind),
+      Substractable.-(w1.date, w2.date),
+      Substractable.-(w1.location, w2.location))
   }
 
 }
