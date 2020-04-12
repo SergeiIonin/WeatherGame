@@ -1,15 +1,14 @@
-package weathergame.calculator
+package weathergame.weather
 
 import akka.actor.{Actor, ActorLogging, Props}
-import weathergame.calculator.WeatherResultActor.GetRealWeatherAPI
-import weathergame.weather.Weather
+import weathergame.weather.WeatherResultActor.GetRealWeatherAPI
 import weathergame.weather.WeatherTypes._
 
 object WeatherResultActor {
 
   def props(name: String) = Props(new WeatherResultActor(name))
 
-  case class GetRealWeatherAPI(forecast: Weather)
+  case class GetRealWeatherAPI(login: String, forecastId: String)
 
 }
 /**
@@ -19,15 +18,15 @@ object WeatherResultActor {
 class WeatherResultActor(name: String) extends Actor with ActorLogging {
 
   override def receive: Receive = {
-    case GetRealWeatherAPI(forecast) => {
-      log.info(s"will add forecast $forecast")
+    case GetRealWeatherAPI(login, forecastId) => {
+      log.info(s"will add forecast with id = $forecastId")
       /*sending request to OpenWeather API
       * and sending the RealWeather onComplete*/
       // fixme this is a stub!!!
       // todo get results from the external API and wrap it into Weather
-      val newRealWeather = Weather(temperature = Some(27), precipitation = Some(Rain()),
+      val newRealWeather = Weather(id = forecastId, temperature = Some(27), precipitation = Some(Rain()),
         sky = Some(Sunny()), wind = Some(1), humidity = Some(70))
-      sender() ! WeatherCalculatorActor.AddResult(newRealWeather, forecast.id)
+      sender() ! WeatherActor.AddRealWeather(login, newRealWeather)
     }
   }
 

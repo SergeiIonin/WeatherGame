@@ -2,9 +2,10 @@ package weathergame.service
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
-import weathergame.calculator.WeatherCalculatorActor
-import weathergame.weather.{Weather, WeatherList, WeatherUtils}
+import weathergame.weather.{Weather, WeatherActor, WeatherList, WeatherUtils}
 import weathergame.gamemechanics.ResultCalculator.Result
+import weathergame.mongo.MongoRepository
+import weathergame.player.PlayerUtils
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -16,12 +17,14 @@ object WeatherServiceActor {
   def name = "weatherService"
 
   // weather protocol
-  case class CreateForecast(forecast: Weather, login: String) // just one forecast could be created
-  case class GetForecast(forecastId: String, login: String)
+  case class CreateForecast(login: String, forecast: Weather)
+  case class GetForecast(login: String, forecastId: String)
   case class GetForecasts(login: String)
+  case class GetRealWeather(login: String, forecastId: String)
+  case class GetRealWeathers(login: String)
 
-  case class GetResult(forecastId: String, login: String)
-  case class GetAllResults(login: String)
+  case class GetResult(login: String, forecastId: String)
+  case class GetResults(login: String)
 
   sealed trait ForecastResponse
   case class ForecastCreated(forecastId: String, forecast: Weather) extends ForecastResponse
@@ -35,73 +38,92 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
   import WeatherServiceActor._
   import context._
 
-  def createWeatherCalculatorActor(name: String) =
-    context.actorOf(WeatherCalculatorActor.props(name), name)
+  def getWeatherActor(name: String) =
+    context.child(name).getOrElse(context.actorOf(WeatherActor.props(name), name))
+
+  def getAllWeatherActors(login: String) =
+    playersForecastsMap.getOrElse(login, ListBuffer.empty).map(getWeatherActor).toList
+
+  def convertToWeathers(f: Future[Iterable[Weather]]) = f.map(l => WeatherList(l.toVector))
+
+  def weatherNotFound() = sender() ! WeatherUtils.emptyWeather
 
   var playersForecastsMap = Map.empty[String, mutable.ListBuffer[String]]
 
+  override def preStart() = {
+    super.preStart()
+    log.info("in preStart() of WSA")
+    val playersForecastsTuples =
+      for {
+      login <- MongoRepository.getAllPlayersLogins
+      _ = log.info(s"login is $login")
+      forecastsIds = ListBuffer(MongoRepository.getAllPlayersForecasts(login).map(_.id)).flatten
+      _ = log.info(s"forecastsIds are $forecastsIds")
+      } yield (login, forecastsIds)
+    playersForecastsMap = playersForecastsTuples.toMap
+    log.info(s"playersForecastsMap was created = ${playersForecastsMap.mkString("\n")}")
+  }
+
   override def receive: Receive = {
-    case CreateForecast(forecast, login) => {
-      val forecastName = forecast.id
+    case CreateForecast(login, forecast) => {
+      val forecastId = forecast.id
 
       def create() = {
-        log.info(s"ready to create WeatherCalculatorActor $forecastName")
-        val weatherCalculatorActor = createWeatherCalculatorActor(forecastName)
+        log.info(s"ready to create WeatherCalculatorActor $forecastId")
+        val weatherCalculatorActor = getWeatherActor(forecastId)
         if (playersForecastsMap.contains(login)) {
-          playersForecastsMap.get(login).map(forecasts => forecasts.addOne(forecastName))
+          playersForecastsMap.get(login).map(forecasts => forecasts.addOne(forecastId))
         }
-        else playersForecastsMap += (login -> ListBuffer(forecastName))
-        weatherCalculatorActor ! WeatherCalculatorActor.AddForecast(forecast)
-        sender() ! ForecastCreated(forecastName, forecast)
+        else playersForecastsMap += (login -> ListBuffer(forecastId))
+        weatherCalculatorActor ! WeatherActor.AddForecast(login, forecast)
+        sender() ! ForecastCreated(forecastId, forecast)
       }
 
       create()
     }
-    case GetForecast(forecastId, login) => {
-      def notFound() = sender() ! None
+    case GetForecast(login, forecastId) => {
 
-      def sendEmpty() = sender() ! WeatherUtils.emptyWeather
+      if (playersForecastsMap.getOrElse(login, ListBuffer.empty).contains(forecastId)) {
+        getForecast(getWeatherActor(forecastId))
+      } else weatherNotFound()
 
-      def getForecast(child: ActorRef) = child forward WeatherCalculatorActor.GetForecast(forecastId)
-
-      playersForecastsMap.get(login) match {
-        case forecasts@Some(ListBuffer(_*)) => {
-          if (forecasts.get.contains(forecastId))
-            context.child(forecastId).fold(notFound())(getForecast)
-          else sendEmpty()
-        }
-        case None => sendEmpty()
-      }
+      def getForecast(child: ActorRef) = child forward WeatherActor.GetForecast(login, forecastId)
     }
     case GetForecasts(login) => {
       import akka.pattern.{ask, pipe}
 
-      def getForecasts = context.children collect {
-        case child if isForecastApplicableToPlayer(child.path.name) =>
-          self.ask(GetForecast(child.path.name, login)).mapTo[Weather]
-      }
+      val allWeatherActors = getAllWeatherActors(login)
+      pipe(convertToForecasts(Future.sequence(getForecasts(allWeatherActors)))) to sender()
 
-      def isForecastApplicableToPlayer(forecastId: String) = {
-        playersForecastsMap.get(login) match {
-          case forecasts@Some(ListBuffer(_*)) =>
-            forecasts.get.contains(forecastId)
-          case None => false
-        }
-      }
+      def getForecasts(actorRefList: Seq[ActorRef]) =
+        actorRefList.map(actorRef => self.ask(GetForecast(actorRef.path.name, login)).mapTo[Weather])
+      def convertToForecasts(f: Future[Iterable[Weather]]) = f.map(l => WeatherList(l.toVector))
+    }
+    case GetRealWeather(login, forecastId) => {
 
-      def convertToForecasts(f: Future[Iterable[Weather]]) =
-        f.map(l => WeatherList(l.toVector))
+      if (playersForecastsMap.getOrElse(login, ListBuffer.empty).contains(forecastId)) {
+        getRealWeather(getWeatherActor(forecastId))
+      } else weatherNotFound()
 
-      log.info(s"before piping to sender")
-      pipe(convertToForecasts(Future.sequence(getForecasts))) to sender()
+      def getRealWeather(child: ActorRef) = child forward WeatherActor.GetRealWeather(login, forecastId)
 
     }
-    case GetResult(forecastId: String, login: String) => {
+    case GetRealWeathers(login) => {
+      import akka.pattern.{ask, pipe}
+
+      def getRealWeathers(actorRefList: Seq[ActorRef]) =
+      actorRefList.map(actorRef => self.ask(GetForecast(actorRef.path.name, login)).mapTo[Weather])
+
+      val allWeatherActors = getAllWeatherActors(login)
+      pipe(convertToWeathers(Future.sequence(getRealWeathers(allWeatherActors)))) to sender()
+
+    }
+    case GetResult(login, forecastId) => {
       def notFound() = sender() ! None
 
       def sendEmpty() = sender() ! 0
 
-      def getResult(child: ActorRef) = child forward WeatherCalculatorActor.GetResult(forecastId)
+      def getResult(child: ActorRef) = child forward WeatherActor.GetResult(login, forecastId)
 
       playersForecastsMap.get(login) match {
         case forecasts@Some(ListBuffer(_*)) => {
@@ -112,8 +134,7 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
         case None => sendEmpty()
       }
     }
-    case GetAllResults(login: String) => {
-      {
+    case GetResults(login) => {
         import akka.pattern.{ask, pipe}
 
         def getResults = context.children collect {
@@ -134,7 +155,6 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
 
         log.info(s"before piping Result to sender")
         pipe(convertToResults(Future.sequence(getResults))) to sender()
-      }
     }
   }
 }

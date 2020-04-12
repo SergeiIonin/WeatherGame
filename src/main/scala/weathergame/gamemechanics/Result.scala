@@ -10,10 +10,14 @@ object ResultCalculator {
   import DifferenceToResultMapperInstances._
   import DifferenceToResultMapper.DifferenceToResultMapperSyntax.DifferenceToResultMapperOps
 
-  case class Result(forecastId: String, res: Int)
+  case class Result(id: String, res: Option[Int] = None)
 
     def differenceToResult(weatherL: Weather, weatherR: Weather): Result = {
       (weatherL - weatherR).toResult
     }
+
+  object ResultUtils {
+    def emptyResult = Result("", 0)
+  }
 
 }

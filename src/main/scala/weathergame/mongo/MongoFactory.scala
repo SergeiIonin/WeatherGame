@@ -21,5 +21,4 @@ object MongoFactory {
 
   val collection: MongoCollection[Document] = db.getCollection(playersCollection)
 
-
 }
