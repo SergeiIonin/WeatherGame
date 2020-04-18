@@ -3,8 +3,8 @@ package weathergame.weather
 import akka.actor.{Actor, ActorLogging, Props}
 import weathergame.gamemechanics.ResultCalculator
 import weathergame.gamemechanics.ResultCalculator.Result
-import weathergame.mongo.MongoRepository
-import weathergame.weather.WeatherActor.{AddForecast, AddRealWeather, GetForecast, GetRealWeather, GetResult}
+import weathergame.mongo.MongoService
+import weathergame.weather.WeatherActor._
 
 object WeatherActor {
 
@@ -22,7 +22,7 @@ object WeatherActor {
 
 }
 
-class WeatherActor(name: String) extends Actor with ActorLogging {
+class WeatherActor(name: String) extends Actor with ActorLogging with MongoService {
 
   var forecastsMap = Map.empty[String, Weather]
   var realWeatherMap = Map.empty[String, Weather]
@@ -32,18 +32,18 @@ class WeatherActor(name: String) extends Actor with ActorLogging {
     // forecast
     case AddForecast(login, forecast) => {
       log.info(s"will add forecast $forecast")
-      MongoRepository.insertForecast(login, forecast)
+      mongoRepository.insertForecast(login, forecast)
       val weatherResultActor = context.actorOf(WeatherResultActor.props(forecast.id), forecast.id)
       weatherResultActor ! WeatherResultActor.GetRealWeatherAPI(login, forecast.id)
     }
     case GetForecast(login, forecastId) => {
       log.info(s"sending forecast info to sender ${sender()}")
-      val forecast = MongoRepository.getForecastById(login, forecastId)
+      val forecast = mongoRepository.getForecastById(login, forecastId)
       sender() ! forecast
     }
     // result
     case AddRealWeather(login, realWeather) => {
-      MongoRepository.insertRealWeather(login, realWeather)
+      mongoRepository.insertRealWeather(login, realWeather)
       realWeatherMap += (realWeather.id -> realWeather)
       // fixme differenceToResult needs only realWeather bc forecast will be fetched by id
       val res: Result = ResultCalculator.differenceToResult(forecastsMap(realWeather.id), realWeather)
@@ -57,7 +57,7 @@ class WeatherActor(name: String) extends Actor with ActorLogging {
     }
     // real weather
     case GetRealWeather(login, forecastId) => {
-      val realWeather = MongoRepository.getRealWeatherById(login, forecastId)
+      val realWeather = mongoRepository.getRealWeatherById(login, forecastId)
      sender() ! realWeather
     }
   }

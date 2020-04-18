@@ -3,20 +3,28 @@ package weathergame.mongo
 import java.util
 
 import com.mongodb.BasicDBObject
+import com.mongodb.client.{FindIterable, MongoCollection}
 import org.bson.Document
 import org.slf4j.LoggerFactory
 import weathergame.gamemechanics.ResultCalculator.{Result, ResultUtils}
 import weathergame.marshalling.WeatherServiceMarshaller
 import weathergame.player.{Player, PlayerUtils}
-import weathergame.weather.{Weather, WeatherUtils}
+import weathergame.weather.Weather
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable
 
-object MongoRepository extends WeatherServiceMarshaller {
+class MongoRepository(val factory: MongoFactory) extends MongoRepositoryOp with WeatherServiceMarshaller {
+  val playersColl: MongoCollection[Document] = factory.collection
+}
+
+object MongoRepository {
+  def apply(factory: MongoFactory) = new MongoRepository(factory)
+}
+
+trait MongoRepositoryOp {
   import spray.json._
 
-  val playersColl = MongoFactory.collection
+  def playersColl: MongoCollection[Document]
   val log = LoggerFactory.getLogger("mongorepo")
 
   def insertPlayer(player: Player) = {
@@ -27,7 +35,7 @@ object MongoRepository extends WeatherServiceMarshaller {
 
   def getPlayerByLogin(login: String) = {
     val query = new BasicDBObject("login", login)
-    val res = playersColl.find(query)
+    val res: FindIterable[Document] = playersColl.find(query)
     if (res.cursor().hasNext) {
       val cursor = res.cursor().next()
       val playerLogin = cursor.get("login").toString
@@ -46,17 +54,17 @@ object MongoRepository extends WeatherServiceMarshaller {
     getAllPlayers.cursor().asScala.toVector.map(_.get("login").toString)
   }
 
-  def insertForecast(login: String, forecast: Weather) = insertWeather(login, forecast, "forecasts")
+  def insertForecast(login: String, forecast: Weather) = insertWeather(playersColl, login, forecast, "forecasts")
 
-  def insertRealWeather(login: String, realWeather: Weather) = insertWeather(login, realWeather, "realWeathers")
+  def insertRealWeather(login: String, realWeather: Weather) = insertWeather(playersColl, login, realWeather, "realWeathers")
 
-  def getForecastById(login: String, forecastId: String) = getWeatherById(login, forecastId, "forecasts")
+  def getForecastById(login: String, forecastId: String) = getWeatherById(playersColl, login, forecastId, "forecasts")
 
-  def getRealWeatherById(login: String, forecastId: String) = getWeatherById(login, forecastId, "realWeathers")
+  def getRealWeatherById(login: String, forecastId: String) = getWeatherById(playersColl, login, forecastId, "realWeathers")
 
-  def getAllPlayersForecasts(login: String) = getAllPlayersWeathers(login, "forecasts")
+  def getAllPlayersForecasts(login: String) = getAllPlayersWeathers(playersColl, login, "forecasts")
 
-  def getAllPlayersRealWeathers(login: String) = getAllPlayersWeathers(login, "realWeathers")
+  def getAllPlayersRealWeathers(login: String) = getAllPlayersWeathers(playersColl, login, "realWeathers")
 
   def insertResult(login: String, result: Result) = {
     val docResult = Document.parse(result.toJson.toString)
@@ -94,28 +102,32 @@ object MongoRepository extends WeatherServiceMarshaller {
     } else List(ResultUtils.emptyResult)
   }
 
+  def deleteAllPlayers = {
+    getAllPlayersLogins.map(deletePlayerByLogin)
+  }
+
   def deletePlayerByLogin(login: String) = {
     val query = new BasicDBObject("login", login)
     playersColl.deleteOne(query)
   }
 
-  def deleteAllPlayersForecasts(login: String) = {
-    deleteAllPlayersWeathers(login, "forecasts")
+  def deleteAllPlayerForecasts(login: String) = {
+    deleteAllPlayerWeathers(playersColl, login, "forecasts")
   }
 
-  def deletePlayersForecastById(login: String, forecastId: String) = {
-    deletePlayersWeatherById(login, forecastId, "forecasts")
+  def deletePlayerForecastById(login: String, forecastId: String) = {
+    deletePlayerWeatherById(playersColl, login, forecastId, "forecasts")
   }
 
-  def deleteAllPlayersRealWeathers(login: String) = {
-    deleteAllPlayersWeathers(login, "realWeathers")
+  def deleteAllPlayerRealWeathers(login: String) = {
+    deleteAllPlayerWeathers(playersColl, login, "realWeathers")
   }
 
-  def deletePlayersRealWeatherById(login: String, forecastId: String) = {
-    deletePlayersWeatherById(login, forecastId, "realWeathers")
+  def deletePlayerRealWeatherById(login: String, forecastId: String) = {
+    deletePlayerWeatherById(playersColl, login, forecastId, "realWeathers")
   }
 
-  def deleteAllPlayersResults(login: String) = {
+  def deleteAllPlayerResults(login: String) = {
     val query = new BasicDBObject("login", login)
     val player = playersColl.find(query)
     if (player.cursor().hasNext) {

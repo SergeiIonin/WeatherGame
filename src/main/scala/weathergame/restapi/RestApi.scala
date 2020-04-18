@@ -30,7 +30,10 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
   import StatusCodes._
 
   def routes: Route =
-    playersRoute ~ playerRoute ~ forecastsRoute ~ forecastRoute ~ realWeathersRoute ~ realWeatherRoute ~ resultsRoute ~ forecastsRoute
+    playersRoute ~ playerRoute ~
+      forecastsRoute ~ forecastRoute ~
+      realWeathersRoute ~ realWeatherRoute ~
+      resultsRoute ~ forecastsRoute
 
   def playersRoute =
     pathPrefix("players") {
@@ -92,7 +95,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
                 case WeatherServiceActor.ForecastCreated(weather.id, weather) => complete(Created, weather)
                 case WeatherServiceActor.ForecastFailedToBeCreated(weather.id) => complete(NoContent)
                 case WeatherServiceActor.ForecastExists =>
-                  val err = Error(s"${forecastId} player already exists.")
+                  val err = Error(s"$forecastId forecast already exists.")
                   complete(BadRequest, err)
               }
             }

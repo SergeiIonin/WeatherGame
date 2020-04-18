@@ -13,8 +13,8 @@ trait DifferenceToResultMapper[U] {
 object DifferenceToResultMapperInstances {
 
   implicit val weatherDifferenceToResultMapper: DifferenceToResultMapper[Weather] =
-    (weather: Weather) => Result(weather.id, temperatureDiffToScore(weather.temperature) + humidityDiffToScore(weather.humidity) +
-      windDiffToScore(weather.wind) + precDiffToScore(weather.precipitation) + skyDiffToScore(weather.sky))
+    (weather: Weather) => Result(weather.id, Some(temperatureDiffToScore(weather.temperature) + humidityDiffToScore(weather.humidity) +
+      windDiffToScore(weather.wind) + precDiffToScore(weather.precipitation) + skyDiffToScore(weather.sky)))
 
   private def temperatureDiffToScore(difference: Option[Int]) = difference match {
     case Some(diff) => if (diff.abs <= 10) {

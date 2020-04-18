@@ -17,7 +17,7 @@ object ResultCalculator {
     }
 
   object ResultUtils {
-    def emptyResult = Result("", 0)
+    def emptyResult = Result("", Some(0))
   }
 
 }

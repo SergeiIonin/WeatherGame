@@ -3,11 +3,10 @@ package weathergame
 import java.util
 
 import com.mongodb.BasicDBObject
+import com.mongodb.client.MongoCollection
 import org.bson.Document
-import spray.json.{JsNumber, JsObject, JsString, JsValue}
 import weathergame.gamemechanics.ResultCalculator.Result
 import weathergame.marshalling.WeatherServiceMarshaller
-import weathergame.mongo.MongoRepository.{playersColl}
 import weathergame.weather.{Weather, WeatherUtils}
 
 import scala.collection.JavaConverters._
@@ -16,14 +15,15 @@ import scala.collection.immutable
 package object mongo extends WeatherServiceMarshaller {
   import spray.json._
 
-  private[mongo] def insertWeather(login: String, weather: Weather, docName: String) = {
+  private[mongo] def insertWeather(playersColl: MongoCollection[Document], login: String, weather: Weather, docName: String) = {
     val docForecast = Document.parse(weather.toJson.toString)
     val update = new Document("$push", new Document(docName, docForecast))
     val filter = new Document("login", login)
     playersColl.updateOne(filter, update)
   }
 
-  private[mongo] def getWeatherById(login: String, weatherId: String, docName: String) = {
+  private[mongo] def getWeatherById(playersColl: MongoCollection[Document], login: String, weatherId: String,
+  docName: String) = {
     val query = new BasicDBObject("login", login)
     val res = playersColl.find(query)
     if (res.cursor().hasNext) {
@@ -40,7 +40,7 @@ package object mongo extends WeatherServiceMarshaller {
     } else WeatherUtils.emptyWeather
   }
 
-  private[mongo] def getAllPlayersWeathers(login: String, docName: String) = {
+  private[mongo] def getAllPlayersWeathers(playersColl: MongoCollection[Document], login: String, docName: String) = {
     val query = new BasicDBObject("login", login)
     val res = playersColl.find(query)
     if (res.cursor().hasNext) {
@@ -87,7 +87,6 @@ package object mongo extends WeatherServiceMarshaller {
       if (doc.containsKey("location")) jsMap+=docStringToJsStringMap("location")
       jsMap
     }
-
     JsObject(weatherDocToStringJsValueMap(doc))
   }
 
@@ -113,11 +112,11 @@ package object mongo extends WeatherServiceMarshaller {
       if (doc.containsKey("res")) jsMap+=docStringToJsNumberMap("res")
       jsMap
     }
-
     JsObject(resultDocToStringJsValueMap(doc))
   }
 
-  private[mongo] def deleteAllPlayersWeathers(login: String, docName: String) = {
+  private[mongo] def deleteAllPlayerWeathers(playersColl: MongoCollection[Document], login: String,
+                                             docName: String) = {
     val query = new BasicDBObject("login", login)
     val player = playersColl.find(query)
     if (player.cursor().hasNext) {
@@ -126,7 +125,8 @@ package object mongo extends WeatherServiceMarshaller {
     }
   }
 
-  private[mongo] def deletePlayersWeatherById(login: String, forecastId: String, docName: String) = {
+  private[mongo] def deletePlayerWeatherById(playersColl: MongoCollection[Document], login: String, forecastId: String,
+                                             docName: String) = {
     val query = new BasicDBObject("login", login)
     val player = playersColl.find(query)
     if (player.cursor().hasNext) {

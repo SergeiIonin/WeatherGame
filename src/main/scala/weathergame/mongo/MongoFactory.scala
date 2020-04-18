@@ -1,24 +1,20 @@
 package weathergame.mongo
 
+import com.mongodb.MongoClient
 import com.mongodb.client.{MongoCollection, MongoDatabase}
-import com.mongodb.{ConnectionString, MongoClient}
-import com.typesafe.config.ConfigFactory
 import org.bson.Document
 
+trait MongoFactory {
 
-object MongoFactory {
+  val mongoHost: String
+  val mongoPort: String
+  val databaseName: String
+  val playersCollection: String
 
-  val conf = ConfigFactory.load()
+  def mongoClient: MongoClient
 
-  private val mongoHost: String = conf.getString("mongo.host")
-  private val mongoPort: String = conf.getString("mongo.port")
-  private val databaseName = conf.getString("mongo.dbname")
-  private val playersCollection = conf.getString("mongo.players-collection")
+  def db: MongoDatabase = mongoClient.getDatabase(databaseName)
 
-  val mongoClient: MongoClient = new MongoClient(mongoHost, mongoPort.toInt)
-
-  val db: MongoDatabase = mongoClient.getDatabase(databaseName)
-
-  val collection: MongoCollection[Document] = db.getCollection(playersCollection)
+  def collection: MongoCollection[Document] = db.getCollection(playersCollection)
 
 }

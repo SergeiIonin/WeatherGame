@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
 import weathergame.weather.{Weather, WeatherActor, WeatherList, WeatherUtils}
 import weathergame.gamemechanics.ResultCalculator.Result
-import weathergame.mongo.MongoRepository
+import weathergame.mongo.{MongoRepository, MongoService}
 import weathergame.player.PlayerUtils
 
 import scala.collection.mutable
@@ -33,7 +33,7 @@ object WeatherServiceActor {
 
 }
 
-class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging {
+class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging with MongoService {
 
   import WeatherServiceActor._
   import context._
@@ -55,9 +55,9 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
     log.info("in preStart() of WSA")
     val playersForecastsTuples =
       for {
-      login <- MongoRepository.getAllPlayersLogins
+      login <- mongoRepository.getAllPlayersLogins
       _ = log.info(s"login is $login")
-      forecastsIds = ListBuffer(MongoRepository.getAllPlayersForecasts(login).map(_.id)).flatten
+      forecastsIds = ListBuffer(mongoRepository.getAllPlayersForecasts(login).map(_.id)).flatten
       _ = log.info(s"forecastsIds are $forecastsIds")
       } yield (login, forecastsIds)
     playersForecastsMap = playersForecastsTuples.toMap
@@ -83,6 +83,7 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
     }
     case GetForecast(login, forecastId) => {
 
+      log.info(s"in WSA, GetForecast($login, $forecastId)")
       if (playersForecastsMap.getOrElse(login, ListBuffer.empty).contains(forecastId)) {
         getForecast(getWeatherActor(forecastId))
       } else weatherNotFound()

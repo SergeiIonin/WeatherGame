@@ -2,7 +2,7 @@ package weathergame.service
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
-import weathergame.mongo.MongoRepository
+import weathergame.mongo.MongoService
 import weathergame.player.{Player, PlayerUtils, Players, PlayersActor}
 
 import scala.concurrent.Future
@@ -32,7 +32,7 @@ object PlayerServiceActor {
 
 }
 
-class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging {
+class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging with MongoService {
 
   import PlayerServiceActor._
   import context._
@@ -48,7 +48,7 @@ class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogg
 
   override def preStart() = {
     super.preStart()
-    players = MongoRepository.getAllPlayersLogins()
+    players = mongoRepository.getAllPlayersLogins()
   }
 
   override def receive: Receive = {
@@ -83,8 +83,7 @@ class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogg
 
       def getPlayers = {
         log.info(s"processing GetPlayers msg, player actors are ${context.children}")
-        val createdActors = context.children.map(_.path.name).toList
-        players.foreach(getPlayerActor(_))
+        players.foreach(getPlayerActor)
         context.children.map { child =>
           self.ask(GetPlayer(child.path.name)).mapTo[Player]
         }

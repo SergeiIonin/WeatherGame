@@ -32,8 +32,8 @@ object WeatherHelper {
     sky = None, wind = Some(3), humidity = Some(10))
 
   // result samples
-  val weatherDiffRes1_2 = Result("0", 40)
-  val weatherDiffRes1_3 = Result("0", 20)
+  val weatherDiffRes1_2 = Result("0", Some(40))
+  val weatherDiffRes1_3 = Result("0", Some(20))
 
 
 }
