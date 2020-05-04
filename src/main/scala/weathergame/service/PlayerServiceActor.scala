@@ -2,14 +2,14 @@ package weathergame.service
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
-import weathergame.mongo.MongoService
+import weathergame.mongo.{MongoFactory, MongoService}
 import weathergame.player.{Player, PlayerUtils, Players, PlayersActor}
 
 import scala.concurrent.Future
 
 
 object PlayerServiceActor {
-  def props(implicit timeout: Timeout) = Props(new PlayerServiceActor)
+  def props(factory: MongoFactory)(implicit timeout: Timeout) = Props(new PlayerServiceActor(factory))
 
   def name = "playerService"
 
@@ -32,15 +32,21 @@ object PlayerServiceActor {
 
 }
 
-class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging with MongoService {
+class PlayerServiceActor(factory: MongoFactory)(implicit timeout: Timeout) extends Actor with ActorLogging
+  with MongoService with MongoFactory {
 
   import PlayerServiceActor._
   import context._
 
+  val mongoHost = factory.mongoHost
+  val mongoPort = factory.mongoPort
+  val databaseName = factory.databaseName
+  val playersCollection = factory.playersCollection
+
   var playerActorsMap = Map.empty[String, ActorRef]
 
   def getPlayerActor(login: String) =
-    context.child(login).getOrElse(context.actorOf(PlayersActor.props(login), login))
+    context.child(login).getOrElse(context.actorOf(PlayersActor.props(login, factory), login))
 
   def playerNotFound() = sender() ! PlayerUtils.emptyPlayer
 
@@ -60,6 +66,7 @@ class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogg
         if (!players.contains(newLogin)) {
           players = players.appended(newLogin)
           val playerActor = getPlayerActor(newLogin)
+          log.info(s"playerActor for $newLogin created ")
           playerActor ! PlayersActor.Add(player)
           log.info(s"ready to send PlayerCreated to sender() ${sender()}")
           sender() ! PlayerCreated(newLogin)

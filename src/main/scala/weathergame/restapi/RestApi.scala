@@ -8,6 +8,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import weathergame.gamemechanics.ResultCalculator.Result
 import weathergame.marshalling.WeatherServiceMarshaller
+import weathergame.mongo.{MongoFactory, MongoService, MongoFactoryImpl}
 import weathergame.player.{Player, Players}
 import weathergame.service.PlayerServiceActor.{CreatePlayer, GetPlayer, GetPlayers, PlayerResponse}
 import weathergame.service.{PlayerServiceActor, WeatherServiceActor}
@@ -17,16 +18,16 @@ import scala.concurrent.ExecutionContext
 
 class RestApi(system: ActorSystem, timeout: Timeout)
   extends RestRoutes {
+
   implicit val requestTimeout = timeout
 
   implicit def executionContext = system.dispatcher
 
-  def createWeatherServiceActor = system.actorOf(WeatherServiceActor.props, WeatherServiceActor.name)
-  def createPlayerServiceActor = system.actorOf(PlayerServiceActor.props, PlayerServiceActor.name)
+  def createWeatherServiceActor = system.actorOf(WeatherServiceActor.props(MongoFactoryImpl), WeatherServiceActor.name)
+  def createPlayerServiceActor = system.actorOf(PlayerServiceActor.props(MongoFactoryImpl), PlayerServiceActor.name)
 }
 
 trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
-
   import StatusCodes._
 
   def routes: Route =
@@ -101,7 +102,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
             }
           } ~ get {
             // GET /players/:player/forecasts/:forecast-id
-            onSuccess(getForecast(forecastId, login)) { forecast: Weather =>
+            onSuccess(getForecast(login, forecastId)) { forecast: Weather =>
               complete(OK, forecast)
             }
           }
@@ -129,7 +130,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
         pathEndOrSingleSlash {
             get {
             // GET /players/:player/forecasts/:forecast-id
-            onSuccess(getRealWeather(forecastId, login)) { realWeather: Weather =>
+            onSuccess(getRealWeather(login, forecastId)) { realWeather: Weather =>
               complete(OK, realWeather)
             }
           }
@@ -168,7 +169,6 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
 }
 
 trait WeatherServiceApi {
-
   import weathergame.service.WeatherServiceActor._
 
   def createWeatherServiceActor(): ActorRef

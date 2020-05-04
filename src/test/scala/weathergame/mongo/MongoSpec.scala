@@ -9,7 +9,13 @@ import weathergame.player.PlayerUtils
 
 import scala.collection.JavaConverters._
 
-class MongoSpec extends FunSpecLike with BeforeAndAfterEach with WeatherServiceMarshaller with FakeMongoService {
+class MongoSpec extends FunSpecLike with BeforeAndAfterEach with WeatherServiceMarshaller with MongoService
+  with MongoFactory {
+
+  val mongoHost = FakeMongoFactoryImpl.mongoHost
+  val mongoPort = FakeMongoFactoryImpl.mongoPort
+  val databaseName = FakeMongoFactoryImpl.databaseName
+  val playersCollection = FakeMongoFactoryImpl.playersCollection
 
   val log = LoggerFactory.getLogger("mongospec")
 

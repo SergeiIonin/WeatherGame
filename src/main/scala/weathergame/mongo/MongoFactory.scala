@@ -6,12 +6,15 @@ import org.bson.Document
 
 trait MongoFactory {
 
-  val mongoHost: String
-  val mongoPort: String
-  val databaseName: String
-  val playersCollection: String
+  def mongoHost: String
 
-  def mongoClient: MongoClient
+  def mongoPort: String
+
+  def databaseName: String
+
+  def playersCollection: String
+
+  def mongoClient: MongoClient = new MongoClient(mongoHost, mongoPort.toInt)
 
   def db: MongoDatabase = mongoClient.getDatabase(databaseName)
 

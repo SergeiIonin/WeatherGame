@@ -2,17 +2,16 @@ package weathergame.service
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
-import weathergame.weather.{Weather, WeatherActor, WeatherList, WeatherUtils}
 import weathergame.gamemechanics.ResultCalculator.Result
-import weathergame.mongo.{MongoRepository, MongoService}
-import weathergame.player.PlayerUtils
+import weathergame.mongo.{MongoFactory, MongoService}
+import weathergame.weather.{Weather, WeatherActor, WeatherList, WeatherUtils}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
 object WeatherServiceActor {
-  def props(implicit timeout: Timeout) = Props(new WeatherServiceActor)
+  def props(factory: MongoFactory)(implicit timeout: Timeout) = Props(new WeatherServiceActor(factory))
 
   def name = "weatherService"
 
@@ -33,13 +32,19 @@ object WeatherServiceActor {
 
 }
 
-class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging with MongoService {
+class WeatherServiceActor(factory: MongoFactory)(implicit timeout: Timeout) extends Actor with ActorLogging
+  with MongoService with MongoFactory {
 
   import WeatherServiceActor._
   import context._
 
+  val mongoHost = factory.mongoHost
+  val mongoPort = factory.mongoPort
+  val databaseName = factory.databaseName
+  val playersCollection = factory.playersCollection
+
   def getWeatherActor(name: String) =
-    context.child(name).getOrElse(context.actorOf(WeatherActor.props(name), name))
+    context.child(name).getOrElse(context.actorOf(WeatherActor.props(name, factory), name))
 
   def getAllWeatherActors(login: String) =
     playersForecastsMap.getOrElse(login, ListBuffer.empty).map(getWeatherActor).toList
@@ -97,7 +102,7 @@ class WeatherServiceActor(implicit timeout: Timeout) extends Actor with ActorLog
       pipe(convertToForecasts(Future.sequence(getForecasts(allWeatherActors)))) to sender()
 
       def getForecasts(actorRefList: Seq[ActorRef]) =
-        actorRefList.map(actorRef => self.ask(GetForecast(actorRef.path.name, login)).mapTo[Weather])
+        actorRefList.map(actorRef => self.ask(GetForecast(login, actorRef.path.name)).mapTo[Weather])
       def convertToForecasts(f: Future[Iterable[Weather]]) = f.map(l => WeatherList(l.toVector))
     }
     case GetRealWeather(login, forecastId) => {

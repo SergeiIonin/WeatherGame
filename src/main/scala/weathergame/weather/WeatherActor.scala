@@ -3,12 +3,12 @@ package weathergame.weather
 import akka.actor.{Actor, ActorLogging, Props}
 import weathergame.gamemechanics.ResultCalculator
 import weathergame.gamemechanics.ResultCalculator.Result
-import weathergame.mongo.MongoService
+import weathergame.mongo.{MongoFactory, MongoService}
 import weathergame.weather.WeatherActor._
 
 object WeatherActor {
 
-  def props(name: String) = Props(new WeatherActor(name))
+  def props(name: String, factory: MongoFactory) = Props(new WeatherActor(name, factory))
 
   /**
    *
@@ -22,7 +22,13 @@ object WeatherActor {
 
 }
 
-class WeatherActor(name: String) extends Actor with ActorLogging with MongoService {
+class WeatherActor(name: String, factory: MongoFactory) extends Actor with ActorLogging with MongoService with MongoFactory {
+
+  // fixme should think about some better way to inject dependency on factory!!!
+  val mongoHost = factory.mongoHost
+  val mongoPort = factory.mongoPort
+  val databaseName = factory.databaseName
+  val playersCollection = factory.playersCollection
 
   var forecastsMap = Map.empty[String, Weather]
   var realWeatherMap = Map.empty[String, Weather]
