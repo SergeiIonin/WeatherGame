@@ -1,14 +1,18 @@
 package weathergame.weather
 
-import akka.actor.{Actor, ActorLogging, Props}
-import weathergame.weather.WeatherResultActor.GetRealWeatherAPI
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.stream.ActorMaterializer
+import weathergame.openweather.WeatherWebClient
+import weathergame.weather.WeatherResultActor.GetRealWeatherByAPI
 import weathergame.weather.WeatherTypes._
+
+import scala.util.{Failure, Success}
 
 object WeatherResultActor {
 
   def props(name: String) = Props(new WeatherResultActor(name))
 
-  case class GetRealWeatherAPI(login: String, forecastId: String)
+  case class GetRealWeatherByAPI(login: String, forecast: Weather)
 
 }
 /**
@@ -16,17 +20,29 @@ object WeatherResultActor {
  * into Weather and sends back to sender (WeatherCalculatorActor)
  * */
 class WeatherResultActor(name: String) extends Actor with ActorLogging {
+  implicit val system = context.system
+  implicit val exeContext = context.dispatcher
+  implicit val mat = ActorMaterializer.apply()
+
+  val client = new WeatherWebClient()
 
   override def receive: Receive = {
-    case GetRealWeatherAPI(login, forecastId) => {
-      log.info(s"will add forecast with id = $forecastId")
+    case GetRealWeatherByAPI(login, forecast) => {
+      val sndr: ActorRef = sender()
+      log.info(s"will get real weather for id = ${forecast.id}, the location is ${forecast.location}," +
+        s"sender is $sndr")
       /*sending request to OpenWeather API
-      * and sending the RealWeather onComplete*/
-      // fixme this is a stub!!!
-      // todo get results from the external API and wrap it into Weather
-      val newRealWeather = Weather(id = forecastId, temperature = Some(27), precipitation = Some(Rain()),
-        sky = Some(Sunny()), wind = Some(1), humidity = Some(70))
-      sender() ! WeatherActor.AddRealWeather(login, newRealWeather)
+      * and sending the real weather on complete*/
+      val req = client.Request(forecast.id, forecast.date, forecast.location)
+      client.getWeather(req) onComplete {
+        case Success(realWeather) => {
+          log.info(s"real weather received is $realWeather")
+          sndr ! WeatherActor.AddRealWeather(login, realWeather)
+        }
+        case Failure(exc) => throw new Exception("can't get a response for the request" +
+          s"${forecast.id} for location ${forecast.location} and date ${forecast.date}, " +
+          s"exception thrown is ${exc.getMessage}")
+      }
     }
   }
 

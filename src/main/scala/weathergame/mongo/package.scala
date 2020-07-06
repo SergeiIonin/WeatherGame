@@ -11,6 +11,8 @@ import weathergame.weather.{Weather, WeatherUtils}
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 package object mongo extends WeatherServiceMarshaller {
   import spray.json._
@@ -19,7 +21,7 @@ package object mongo extends WeatherServiceMarshaller {
     val docForecast = Document.parse(weather.toJson.toString)
     val update = new Document("$push", new Document(docName, docForecast))
     val filter = new Document("login", login)
-    playersColl.updateOne(filter, update)
+    Future(playersColl.updateOne(filter, update))
   }
 
   private[mongo] def getWeatherById(playersColl: MongoCollection[Document], login: String, weatherId: String,

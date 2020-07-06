@@ -107,6 +107,7 @@ class WeatherServiceActor(factory: MongoFactory)(implicit timeout: Timeout) exte
     }
     case GetRealWeather(login, forecastId) => {
 
+      log.info(s"in WSA, GetRealWeather($login, $forecastId)")
       if (playersForecastsMap.getOrElse(login, ListBuffer.empty).contains(forecastId)) {
         getRealWeather(getWeatherActor(forecastId))
       } else weatherNotFound()
@@ -118,7 +119,7 @@ class WeatherServiceActor(factory: MongoFactory)(implicit timeout: Timeout) exte
       import akka.pattern.{ask, pipe}
 
       def getRealWeathers(actorRefList: Seq[ActorRef]) =
-      actorRefList.map(actorRef => self.ask(GetForecast(actorRef.path.name, login)).mapTo[Weather])
+      actorRefList.map(actorRef => self.ask(GetRealWeather(login, actorRef.path.name)).mapTo[Weather])
 
       val allWeatherActors = getAllWeatherActors(login)
       pipe(convertToWeathers(Future.sequence(getRealWeathers(allWeatherActors)))) to sender()

@@ -34,13 +34,18 @@ class WeatherActor(name: String, factory: MongoFactory) extends Actor with Actor
   var realWeatherMap = Map.empty[String, Weather]
   var resultsMap = Map.empty[String, Result]
 
+  def getResult(login: String, realWeather: Weather) = {
+    val forecast = mongoRepository.getForecastById(login, realWeather.id)
+    ResultCalculator.differenceToResult(forecast, realWeather)
+  }
+
   override def receive: Receive = {
     // forecast
     case AddForecast(login, forecast) => {
       log.info(s"will add forecast $forecast")
       mongoRepository.insertForecast(login, forecast)
-      val weatherResultActor = context.actorOf(WeatherResultActor.props(forecast.id), forecast.id)
-      weatherResultActor ! WeatherResultActor.GetRealWeatherAPI(login, forecast.id)
+      val weatherResultActor = context.actorOf(WeatherResultActor.props(forecast.id), s"result-${forecast.id}")
+      weatherResultActor ! WeatherResultActor.GetRealWeatherByAPI(login, forecast)
     }
     case GetForecast(login, forecastId) => {
       log.info(s"sending forecast info to sender ${sender()}")
@@ -52,8 +57,9 @@ class WeatherActor(name: String, factory: MongoFactory) extends Actor with Actor
       mongoRepository.insertRealWeather(login, realWeather)
       realWeatherMap += (realWeather.id -> realWeather)
       // fixme differenceToResult needs only realWeather bc forecast will be fetched by id
-      val res: Result = ResultCalculator.differenceToResult(forecastsMap(realWeather.id), realWeather)
+      val res: Result = getResult(login, realWeather)
       // fixme result should be put into mongo
+      log.info(s"the result of the game is $res")
       resultsMap += (realWeather.id -> res)
     }
     case GetResult(login, forecastId) => {
@@ -64,7 +70,8 @@ class WeatherActor(name: String, factory: MongoFactory) extends Actor with Actor
     // real weather
     case GetRealWeather(login, forecastId) => {
       val realWeather = mongoRepository.getRealWeatherById(login, forecastId)
-     sender() ! realWeather
+      log.info(s"sending realWeather info to sender ${sender()}, realWeather is $realWeather")
+      sender() ! realWeather
     }
   }
 

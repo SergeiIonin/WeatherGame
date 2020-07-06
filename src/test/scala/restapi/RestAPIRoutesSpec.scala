@@ -1,4 +1,4 @@
-package com.example
+package restapi
 
 import java.util.concurrent.TimeUnit
 
@@ -14,7 +14,8 @@ import weathergame.mongo.{FakeMongoFactoryImpl, MongoFactory, MongoService}
 import weathergame.restapi.RestRoutes
 import weathergame.service.{PlayerServiceActor, WeatherServiceActor}
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.util.{Failure, Success}
 
 class RestAPIRoutesSpec extends WordSpec with BeforeAndAfterEach with Matchers with ScalaFutures
   with ScalatestRouteTest with RestRoutes with MongoService with MongoFactory {
@@ -33,7 +34,6 @@ class RestAPIRoutesSpec extends WordSpec with BeforeAndAfterEach with Matchers w
 
   val player1ToInsert = PlayerHelper.player1
   val player2ToInsert = PlayerHelper.player2
-  val playersInDBRequired = Set(player1ToInsert, player2ToInsert)
 
   private def initDBState() = {
     mongoRepository.deleteAllPlayers
@@ -44,11 +44,6 @@ class RestAPIRoutesSpec extends WordSpec with BeforeAndAfterEach with Matchers w
   private def updateDBState = {
     mongoRepository.getAllPlayersLogins().foreach(println)
     initDBState()
-    /*val playersInDBActual = Set(mongoRepository.getPlayerByLogin(player1ToInsert.login),
-      mongoRepository.getPlayerByLogin(player2ToInsert.login))
-    if (playersInDBRequired != playersInDBActual) {
-      initDBState
-    }*/
   }
 
   override def beforeEach() = {
@@ -124,9 +119,31 @@ class RestAPIRoutesSpec extends WordSpec with BeforeAndAfterEach with Matchers w
       // note that there's no need for the host part in the uri:
       val forecast1 = WeatherHelper.weather1
       val forecast3 = WeatherHelper.weather3
-      mongoRepository.insertForecast(player1ToInsert.login, forecast1)
-      mongoRepository.insertForecast(player1ToInsert.login, forecast3)
-      val request = HttpRequest(uri = s"/players/${player1ToInsert.login}/forecasts")
+      Future.sequence(Seq(mongoRepository.insertForecast(player1ToInsert.login, forecast1),
+        mongoRepository.insertForecast(player1ToInsert.login, forecast3))) onComplete {
+        case Success(_) => {
+          val request = HttpRequest(uri = s"/players/${player1ToInsert.login}/forecasts")
+          // implicit val tildeArrow: TildeArrow.InjectIntoRequestTransformer.type = TildeArrow.InjectIntoRequestTransformer
+
+          request ~> routesTest ~> check {
+            status should === (StatusCodes.OK)
+
+            contentType should === (ContentTypes.`application/json`)
+
+            entityAs[String] should === (
+              """{"list":[{"humidity":70,"id":"1","precipitation":{"name":"rain"},"sky":{"name":"sunny"},"temperature":27,"wind":1},{"humidity":75,"id":"3","precipitation":{"name":"snow"},"sky":{"name":"sunny"},"temperature":2,"wind":3}]}""".stripMargin)
+          }
+        }
+        case Failure(exception) => fail("test fail", exception)
+      }
+
+    }
+
+    "return players realWeather by (GET /players/:player/realWeathers/:forecastId)" in {
+      // note that there's no need for the host part in the uri:
+      val realWeather1 = WeatherHelper.weather1
+      mongoRepository.insertRealWeather(player1ToInsert.login, realWeather1)
+      val request = HttpRequest(uri = s"/players/${player1ToInsert.login}/real-weathers/${realWeather1.id}")
       // implicit val tildeArrow: TildeArrow.InjectIntoRequestTransformer.type = TildeArrow.InjectIntoRequestTransformer
 
       request ~> routesTest ~> check {
@@ -135,7 +152,30 @@ class RestAPIRoutesSpec extends WordSpec with BeforeAndAfterEach with Matchers w
         contentType should === (ContentTypes.`application/json`)
 
         entityAs[String] should === (
-          """{"list":[{"humidity":70,"id":"1","precipitation":{"name":"rain"},"sky":{"name":"sunny"},"temperature":27,"wind":1},{"humidity":75,"id":"3","precipitation":{"name":"snow"},"sky":{"name":"sunny"},"temperature":2,"wind":3}]}""".stripMargin)
+          """{"humidity":70,"id":"1","precipitation":{"name":"rain"},"sky":{"name":"sunny"},"temperature":27,"wind":1}""".stripMargin)
+      }
+    }
+
+    "return players realWeathers by (GET /players/:player/realWeathers)" in {
+      // note that there's no need for the host part in the uri:
+      val realWeather1 = WeatherHelper.weather1
+      val realWeather3 = WeatherHelper.weather3
+      Future.sequence(Seq(mongoRepository.insertRealWeather(player1ToInsert.login, realWeather1),
+        mongoRepository.insertRealWeather(player1ToInsert.login, realWeather3))) onComplete {
+        case Success(_) => {
+          val request = HttpRequest(uri = s"/players/${player1ToInsert.login}/forecasts")
+          // implicit val tildeArrow: TildeArrow.InjectIntoRequestTransformer.type = TildeArrow.InjectIntoRequestTransformer
+
+          request ~> routesTest ~> check {
+            status should === (StatusCodes.OK)
+
+            contentType should === (ContentTypes.`application/json`)
+
+            entityAs[String] should === (
+              """{"list":[{"humidity":70,"id":"1","precipitation":{"name":"rain"},"sky":{"name":"sunny"},"temperature":27,"wind":1},{"humidity":75,"id":"3","precipitation":{"name":"snow"},"sky":{"name":"sunny"},"temperature":2,"wind":3}]}""".stripMargin)
+          }
+        }
+        case Failure(exception) => fail("test fail", exception)
       }
     }
 

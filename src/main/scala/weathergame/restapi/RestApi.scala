@@ -33,8 +33,8 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
   def routes: Route =
     playersRoute ~ playerRoute ~
       forecastsRoute ~ forecastRoute ~
-      realWeathersRoute ~ realWeatherRoute ~
-      resultsRoute ~ forecastsRoute
+      realWeathersRoute ~ realWeatherRoute
+  //    resultsRoute ~ forecastsRoute
 
   def playersRoute =
     pathPrefix("players") {

@@ -84,7 +84,7 @@ object SubstractableInstances {
       Substractable.+(w1.sky, w2.sky),
       Substractable.+(w1.humidity, w2.humidity),
       Substractable.+(w1.wind, w2.wind),
-      Substractable.+(w1.date, w2.date),
+      w1.date,
       Substractable.+(w1.location, w2.location)
     )
 
@@ -95,7 +95,7 @@ object SubstractableInstances {
       Substractable.-(w1.sky, w2.sky),
       Substractable.-(w1.humidity, w2.humidity),
       Substractable.-(w1.wind, w2.wind),
-      Substractable.-(w1.date, w2.date),
+      w1.date,
       Substractable.-(w1.location, w2.location))
   }
 

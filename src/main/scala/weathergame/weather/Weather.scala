@@ -3,6 +3,7 @@ package weathergame.weather
 import java.util.UUID.randomUUID
 
 import WeatherUtils._
+import akka.http.scaladsl.model.DateTime
 import weathergame.weather.WeatherTypes.{Precipitation, Sky, WeatherADT}
 
 case class Weather(id: String = generateId,
