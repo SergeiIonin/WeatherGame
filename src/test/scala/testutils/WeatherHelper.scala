@@ -35,5 +35,7 @@ object WeatherHelper {
   val weatherDiffRes1_2 = Result("0", Some(40))
   val weatherDiffRes1_3 = Result("0", Some(20))
 
+  val result1 = Result("1", Some(42))
+  val result2 = Result("2", Some(21))
 
 }

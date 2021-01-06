@@ -18,8 +18,15 @@ package object mongo extends WeatherServiceMarshaller {
   import spray.json._
 
   private[mongo] def insertWeather(playersColl: MongoCollection[Document], login: String, weather: Weather, docName: String) = {
-    val docForecast = Document.parse(weather.toJson.toString)
-    val update = new Document("$push", new Document(docName, docForecast))
+    val docWeather = Document.parse(weather.toJson.toString)
+    val update = new Document("$push", new Document(docName, docWeather))
+    val filter = new Document("login", login)
+    Future(playersColl.updateOne(filter, update))
+  }
+
+  private[mongo] def insertResult(playersColl: MongoCollection[Document], login: String, result: Result, docName: String) = {
+    val docResult = Document.parse(result.toJson.toString)
+    val update = new Document("$push", new Document(docName, docResult))
     val filter = new Document("login", login)
     Future(playersColl.updateOne(filter, update))
   }
@@ -110,15 +117,15 @@ package object mongo extends WeatherServiceMarshaller {
 
     val resultDocToStringJsValueMap = (doc: Document) => {
       var jsMap = immutable.Map.empty[String, JsValue]
-      if (doc.containsKey("id")) jsMap+=docStringToJsStringMap("id")
-      if (doc.containsKey("res")) jsMap+=docStringToJsNumberMap("res")
+      if (doc.containsKey("id")) jsMap += docStringToJsStringMap("id")
+      if (doc.containsKey("res")) jsMap += docStringToJsNumberMap("res")
       jsMap
     }
     JsObject(resultDocToStringJsValueMap(doc))
   }
 
   private[mongo] def deleteAllPlayerWeathers(playersColl: MongoCollection[Document], login: String,
-                                             docName: String) = {
+    docName: String) = {
     val query = new BasicDBObject("login", login)
     val player = playersColl.find(query)
     if (player.cursor().hasNext) {

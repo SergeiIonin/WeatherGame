@@ -32,7 +32,6 @@ class WeatherActor(name: String, factory: MongoFactory) extends Actor with Actor
 
   var forecastsMap = Map.empty[String, Weather]
   var realWeatherMap = Map.empty[String, Weather]
-  var resultsMap = Map.empty[String, Result]
 
   def getResult(login: String, realWeather: Weather) = {
     val forecast = mongoRepository.getForecastById(login, realWeather.id)
@@ -56,16 +55,16 @@ class WeatherActor(name: String, factory: MongoFactory) extends Actor with Actor
     case AddRealWeather(login, realWeather) => {
       mongoRepository.insertRealWeather(login, realWeather)
       realWeatherMap += (realWeather.id -> realWeather)
-      // fixme differenceToResult needs only realWeather bc forecast will be fetched by id
-      val res: Result = getResult(login, realWeather)
+      val result = getResult(login, realWeather)
       // fixme result should be put into mongo
-      log.info(s"the result of the game is $res")
-      resultsMap += (realWeather.id -> res)
+      log.info(s"the result of the game is $result")
+      mongoRepository.insertResult(login, result)
     }
     case GetResult(login, forecastId) => {
       log.info(s"sending result to sender ${sender()}")
       // fixme result should be get from mongo
-      sender() ! resultsMap.getOrElse(forecastId, 0)
+      val result = mongoRepository.getResultById(login, forecastId)
+      sender() ! result
     }
     // real weather
     case GetRealWeather(login, forecastId) => {

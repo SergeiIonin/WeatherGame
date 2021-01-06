@@ -6,11 +6,10 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.pattern.ask
 import akka.util.Timeout
-import weathergame.gamemechanics.ResultCalculator.Result
+import weathergame.gamemechanics.ResultCalculator.{Result, ResultList}
 import weathergame.marshalling.WeatherServiceMarshaller
-import weathergame.mongo.{MongoFactory, MongoService, MongoFactoryImpl}
+import weathergame.mongo.{MongoFactory, MongoFactoryImpl, MongoService}
 import weathergame.player.{Player, Players}
-import weathergame.service.PlayerServiceActor.{CreatePlayer, GetPlayer, GetPlayers, PlayerResponse}
 import weathergame.service.{PlayerServiceActor, WeatherServiceActor}
 import weathergame.weather.{Weather, WeatherList}
 
@@ -27,14 +26,14 @@ class RestApi(system: ActorSystem, timeout: Timeout)
   def createPlayerServiceActor = system.actorOf(PlayerServiceActor.props(MongoFactoryImpl), PlayerServiceActor.name)
 }
 
-trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
+trait RestRoutes extends WeatherServiceApi with PlayerServiceApi with WeatherServiceMarshaller {
   import StatusCodes._
 
   def routes: Route =
     playersRoute ~ playerRoute ~
       forecastsRoute ~ forecastRoute ~
-      realWeathersRoute ~ realWeatherRoute
-  //    resultsRoute ~ forecastsRoute
+        realWeathersRoute ~ realWeatherRoute ~
+          resultsRoute ~ resultRoute
 
   def playersRoute =
     pathPrefix("players") {
@@ -56,7 +55,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
           entity(as[Player]) { player: Player =>
             onSuccess(createPlayer(player)) {
               case PlayerServiceActor.PlayerCreated(player.login) => complete(Created, player)
-              case PlayerServiceActor.PlayerFailedToBeCreated(player.login) => complete(NoContent)
+              case PlayerServiceActor.PlayerFailedCreated(player.login) => complete(NoContent)
               case PlayerServiceActor.PlayerExists =>
                 val err = Error(s"$login player already exists.")
                 complete(BadRequest, err)
@@ -86,7 +85,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
     }
 
   def forecastRoute =
-  pathPrefix("players" / Segment) { login =>
+    pathPrefix("players" / Segment) { login =>
       path("forecasts" / Segment) { forecastId =>
         pathEndOrSingleSlash {
           post {
@@ -171,29 +170,12 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
 trait WeatherServiceApi {
   import weathergame.service.WeatherServiceActor._
 
-  def createWeatherServiceActor(): ActorRef
-
-  def createPlayerServiceActor(): ActorRef
-
   implicit def executionContext: ExecutionContext
-
   implicit def requestTimeout: Timeout
 
+  def createWeatherServiceActor(): ActorRef
+
   lazy val weatherServiceActor = createWeatherServiceActor()
-  lazy val playerServiceActor = createPlayerServiceActor()
-
-  // players
-  def createPlayer(player: Player) = {
-    playerServiceActor.ask(CreatePlayer(player)).mapTo[PlayerResponse]
-  }
-
-  def getPlayer(login: String) = {
-    playerServiceActor.ask(GetPlayer(login)).mapTo[Player]
-  }
-
-  def getPlayers() = {
-    playerServiceActor.ask(GetPlayers).mapTo[Players]
-  }
 
   //forecasts
   def submitForecast(login: String, weather: Weather) = {
@@ -223,8 +205,31 @@ trait WeatherServiceApi {
   }
 
   def getResults(login: String) = {
-    weatherServiceActor.ask(GetResults(login)).mapTo[Result]
+    weatherServiceActor.ask(GetResults(login)).mapTo[ResultList]
   }
 
+}
+
+trait PlayerServiceApi {
+  import weathergame.service.PlayerServiceActor._
+
+  implicit def executionContext: ExecutionContext
+  implicit def requestTimeout: Timeout
+
+  def createPlayerServiceActor(): ActorRef
+
+  lazy val playerServiceActor = createPlayerServiceActor()
+
+  def createPlayer(player: Player) = {
+    playerServiceActor.ask(CreatePlayer(player)).mapTo[PlayerResponse]
+  }
+
+  def getPlayer(login: String) = {
+    playerServiceActor.ask(GetPlayer(login)).mapTo[Player]
+  }
+
+  def getPlayers() = {
+    playerServiceActor.ask(GetPlayers).mapTo[Players]
+  }
 }
 

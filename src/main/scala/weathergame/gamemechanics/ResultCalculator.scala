@@ -16,6 +16,8 @@ object ResultCalculator {
       (weatherL - weatherR).toResult
     }
 
+  case class ResultList(list: Vector[Result])
+
   object ResultUtils {
     def emptyResult = Result("", Some(0))
   }

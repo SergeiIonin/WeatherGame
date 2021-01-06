@@ -28,7 +28,7 @@ object PlayerServiceActor {
 
   case object PlayerExists extends PlayerResponse
 
-  case class PlayerFailedToBeCreated(login: String) extends PlayerResponse
+  case class PlayerFailedCreated(login: String) extends PlayerResponse
 
 }
 

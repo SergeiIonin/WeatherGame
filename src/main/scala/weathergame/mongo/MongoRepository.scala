@@ -8,6 +8,7 @@ import org.bson.Document
 import org.slf4j.LoggerFactory
 import weathergame.gamemechanics.ResultCalculator.{Result, ResultUtils}
 import weathergame.marshalling.WeatherServiceMarshaller
+import weathergame.mongo
 import weathergame.player.{Player, PlayerUtils}
 import weathergame.weather.Weather
 
@@ -58,6 +59,8 @@ trait MongoRepositoryOp {
 
   def insertRealWeather(login: String, realWeather: Weather) = insertWeather(playersColl, login, realWeather, "realWeathers")
 
+  def insertResult(login: String, result: Result) = mongo.insertResult(playersColl, login, result, "results")
+
   def getForecastById(login: String, forecastId: String) = getWeatherById(playersColl, login, forecastId, "forecasts")
 
   def getRealWeatherById(login: String, forecastId: String) = getWeatherById(playersColl, login, forecastId, "realWeathers")
@@ -65,13 +68,6 @@ trait MongoRepositoryOp {
   def getAllPlayersForecasts(login: String) = getAllPlayersWeathers(playersColl, login, "forecasts")
 
   def getAllPlayersRealWeathers(login: String) = getAllPlayersWeathers(playersColl, login, "realWeathers")
-
-  def insertResult(login: String, result: Result) = {
-    val docResult = Document.parse(result.toJson.toString)
-    val update = new Document("$push", new Document("results", docResult))
-    val filter = new Document("login", login)
-    playersColl.updateOne(filter, update)
-  }
 
   def getResultById(login: String, forecastId: String) = {
     val query = new BasicDBObject("login", login)
@@ -83,8 +79,8 @@ trait MongoRepositoryOp {
         val resultIds = resultsList.map(_.get("id").toString)
         if (resultIds contains forecastId) {
           val resultIdToResult = (resultIds zip resultsList).toMap
-          val ResultDoc = resultIdToResult(forecastId)
-          transformDocumentToResult(ResultDoc)
+          val resultDoc = resultIdToResult(forecastId)
+          transformDocumentToResult(resultDoc)
         } else ResultUtils.emptyResult
       } else ResultUtils.emptyResult
     } else ResultUtils.emptyResult
