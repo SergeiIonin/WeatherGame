@@ -1,5 +1,6 @@
 lazy val akkaHttpVersion = "10.1.11"
 lazy val akkaVersion    = "2.6.3"
+//lazy val scalaMongoVersion = "2.9.0"
 
 lazy val root = (project in file(".")).
   settings(
@@ -16,10 +17,13 @@ lazy val root = (project in file(".")).
       "ch.qos.logback"    % "logback-classic"           % "1.2.3",
       "org.typelevel"     %% "cats-core"                % "2.0.0",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-
+      //"org.mongodb.scala" %% "mongo-scala-driver" % scalaMongoVersion,
+      "org.mongodb" % "mongo-java-driver" % "3.12.2",
 
       "com.typesafe.akka" %% "akka-http-testkit"        % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion     % Test,
-      "org.scalatest"     %% "scalatest"                % "3.0.8"         % Test
+      "org.scalatest"     %% "scalatest"                % "3.0.8"         % Test,
+/*      "com.github.fakemongo" % "fongo"                  % "2.2.0-RC2"         % Test,
+      "org.objenesis"     % "objenesis"                 % "3.1"           % Test*/
     )
   )

@@ -6,10 +6,10 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.pattern.ask
 import akka.util.Timeout
-import weathergame.gamemechanics.Result
+import weathergame.gamemechanics.ResultCalculator.{Result, ResultList}
 import weathergame.marshalling.WeatherServiceMarshaller
+import weathergame.mongo.{MongoFactory, MongoFactoryImpl, MongoService}
 import weathergame.player.{Player, Players}
-import weathergame.service.PlayerServiceActor.{CreatePlayer, GetPlayer, GetPlayers, PlayerResponse}
 import weathergame.service.{PlayerServiceActor, WeatherServiceActor}
 import weathergame.weather.{Weather, WeatherList}
 
@@ -17,19 +17,23 @@ import scala.concurrent.ExecutionContext
 
 class RestApi(system: ActorSystem, timeout: Timeout)
   extends RestRoutes {
+
   implicit val requestTimeout = timeout
 
   implicit def executionContext = system.dispatcher
 
-  def createWeatherServiceActor = system.actorOf(WeatherServiceActor.props, WeatherServiceActor.name)
-  def createPlayerServiceActor = system.actorOf(PlayerServiceActor.props, PlayerServiceActor.name)
+  def createWeatherServiceActor = system.actorOf(WeatherServiceActor.props(MongoFactoryImpl), WeatherServiceActor.name)
+  def createPlayerServiceActor = system.actorOf(PlayerServiceActor.props(MongoFactoryImpl), PlayerServiceActor.name)
 }
 
-trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
-
+trait RestRoutes extends WeatherServiceApi with PlayerServiceApi with WeatherServiceMarshaller {
   import StatusCodes._
 
-  def routes: Route = playersRoute ~ playerRoute ~ forecastsRoute ~ forecastRoute // todo ~ resultsRoute ~ forecastsRoute
+  def routes: Route =
+    playersRoute ~ playerRoute ~
+      forecastsRoute ~ forecastRoute ~
+        realWeathersRoute ~ realWeatherRoute ~
+          resultsRoute ~ resultRoute
 
   def playersRoute =
     pathPrefix("players") {
@@ -51,7 +55,7 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
           entity(as[Player]) { player: Player =>
             onSuccess(createPlayer(player)) {
               case PlayerServiceActor.PlayerCreated(player.login) => complete(Created, player)
-              case PlayerServiceActor.PlayerFailedToBeCreated(player.login) => complete(NoContent)
+              case PlayerServiceActor.PlayerFailedCreated(player.login) => complete(NoContent)
               case PlayerServiceActor.PlayerExists =>
                 val err = Error(s"$login player already exists.")
                 complete(BadRequest, err)
@@ -81,24 +85,80 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
     }
 
   def forecastRoute =
-  pathPrefix("players" / Segment) { login =>
+    pathPrefix("players" / Segment) { login =>
       path("forecasts" / Segment) { forecastId =>
         pathEndOrSingleSlash {
           post {
             // POST /players/:player/forecasts/:forecast-id
             entity(as[Weather]) { weather: Weather =>
-              onSuccess(submitForecast(weather, login)) {
+              onSuccess(submitForecast(login, weather)) {
                 case WeatherServiceActor.ForecastCreated(weather.id, weather) => complete(Created, weather)
                 case WeatherServiceActor.ForecastFailedToBeCreated(weather.id) => complete(NoContent)
                 case WeatherServiceActor.ForecastExists =>
-                  val err = Error(s"${forecastId} player already exists.")
+                  val err = Error(s"$forecastId forecast already exists.")
                   complete(BadRequest, err)
               }
             }
           } ~ get {
             // GET /players/:player/forecasts/:forecast-id
-            onSuccess(getForecast(forecastId, login)) { forecast: Weather =>
+            onSuccess(getForecast(login, forecastId)) { forecast: Weather =>
               complete(OK, forecast)
+            }
+          }
+        }
+      }
+    }
+
+  def realWeathersRoute =
+    pathPrefix("players" / Segment) { login => // does this pathPrefix required??
+      path("real-weathers") {
+        pathEndOrSingleSlash {
+          get {
+            // GET /players/:player/realWeathers
+            onSuccess(getRealWeathers(login)) { realWeathers =>
+              complete(OK, realWeathers)
+            }
+          }
+        }
+      }
+    }
+
+  def realWeatherRoute =
+    pathPrefix("players" / Segment) { login =>
+      path("real-weathers" / Segment) { forecastId =>
+        pathEndOrSingleSlash {
+            get {
+            // GET /players/:player/forecasts/:forecast-id
+            onSuccess(getRealWeather(login, forecastId)) { realWeather: Weather =>
+              complete(OK, realWeather)
+            }
+          }
+        }
+      }
+    }
+
+  def resultsRoute =
+    pathPrefix("players" / Segment) { login => // does this pathPrefix required??
+      path("results") {
+        pathEndOrSingleSlash {
+          get {
+            // GET /players/:player/results
+            onSuccess(getResults(login)) { results =>
+              complete(OK, results)
+            }
+          }
+        }
+      }
+    }
+
+  def resultRoute =
+  pathPrefix("players" / Segment) { login =>
+      path("results" / Segment) { forecastId =>
+        pathEndOrSingleSlash {
+          get {
+            // GET /players/:player/results/:forecast-id
+            onSuccess(getResult(login, forecastId)) { result: Result =>
+              complete(OK, result)
             }
           }
         }
@@ -108,21 +168,58 @@ trait RestRoutes extends WeatherServiceApi with WeatherServiceMarshaller {
 }
 
 trait WeatherServiceApi {
-
   import weathergame.service.WeatherServiceActor._
+
+  implicit def executionContext: ExecutionContext
+  implicit def requestTimeout: Timeout
 
   def createWeatherServiceActor(): ActorRef
 
-  def createPlayerServiceActor(): ActorRef
+  lazy val weatherServiceActor = createWeatherServiceActor()
+
+  //forecasts
+  def submitForecast(login: String, weather: Weather) = {
+    weatherServiceActor.ask(CreateForecast(login, weather)).mapTo[ForecastResponse] // was a headache when param weather was skipped in CreateForecast()
+  }
+
+  def getForecast(login: String, `forecast-id`: String) = {
+    weatherServiceActor.ask(GetForecast(login, `forecast-id`)).mapTo[Weather]
+  }
+
+  def getForecasts(login: String) = {
+    weatherServiceActor.ask(GetForecasts(login)).mapTo[WeatherList]
+  }
+
+  //realWeathers
+  def getRealWeather(login: String, `forecast-id`: String) = {
+    weatherServiceActor.ask(GetRealWeather(login, `forecast-id`)).mapTo[Weather]
+  }
+
+  def getRealWeathers(login: String) = {
+    weatherServiceActor.ask(GetRealWeathers(login)).mapTo[WeatherList]
+  }
+
+  //results
+  def getResult(login: String, `forecast-id`: String) = {
+    weatherServiceActor.ask(GetResult(login, `forecast-id`)).mapTo[Result]
+  }
+
+  def getResults(login: String) = {
+    weatherServiceActor.ask(GetResults(login)).mapTo[ResultList]
+  }
+
+}
+
+trait PlayerServiceApi {
+  import weathergame.service.PlayerServiceActor._
 
   implicit def executionContext: ExecutionContext
-
   implicit def requestTimeout: Timeout
 
-  lazy val weatherServiceActor = createWeatherServiceActor()
+  def createPlayerServiceActor(): ActorRef
+
   lazy val playerServiceActor = createPlayerServiceActor()
 
-  // players
   def createPlayer(player: Player) = {
     playerServiceActor.ask(CreatePlayer(player)).mapTo[PlayerResponse]
   }
@@ -134,33 +231,5 @@ trait WeatherServiceApi {
   def getPlayers() = {
     playerServiceActor.ask(GetPlayers).mapTo[Players]
   }
-
-  //forecasts
-  def submitForecast(weather: Weather, login: String) = {
-    weatherServiceActor.ask(CreateForecast(weather, login)).mapTo[ForecastResponse] // was a headache when param weather was skipped in CreateForecast()
-  }
-
-  def getForecast(`forecast-id`: String, login: String) = {
-    weatherServiceActor.ask(GetForecast(`forecast-id`, login)).mapTo[Weather]
-  }
-
-  def getForecasts(login: String) = {
-    weatherServiceActor.ask(GetForecasts(login)).mapTo[WeatherList] // todo GetForecasts(login)
-  }
-
-  def getGamesResults(login: String) = {
-    weatherServiceActor.ask(GetAllResults(login)).mapTo[Result]
-  }
-
-  /*  def getGamesResults() =
-weatherServiceActor.ask(GetEvents).mapTo[Events]
-
-def deleteGame(event: String) =
-weatherServiceActor.ask(CancelEvent(event))
-.mapTo[Option[Event]]
-
-def getRaiting(event: String, tickets: Int) =
-weatherServiceActor.ask(GetTickets(event, tickets))
-.mapTo[TicketSeller.Tickets]*/
 }
 

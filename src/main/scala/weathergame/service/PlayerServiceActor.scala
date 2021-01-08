@@ -2,13 +2,14 @@ package weathergame.service
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.util.Timeout
-import weathergame.player.{Player, Players, PlayersActor}
+import weathergame.mongo.{MongoFactory, MongoService}
+import weathergame.player.{Player, PlayerUtils, Players, PlayersActor}
 
 import scala.concurrent.Future
 
 
 object PlayerServiceActor {
-  def props(implicit timeout: Timeout) = Props(new PlayerServiceActor)
+  def props(factory: MongoFactory)(implicit timeout: Timeout) = Props(new PlayerServiceActor(factory))
 
   def name = "playerService"
 
@@ -19,7 +20,7 @@ object PlayerServiceActor {
 
   case object GetPlayers
 
-  case class GetRaiting() // some improvements like pagination will be added later
+  case class GetRating() // some improvements like pagination will be added later
 
   sealed trait PlayerResponse
 
@@ -27,21 +28,34 @@ object PlayerServiceActor {
 
   case object PlayerExists extends PlayerResponse
 
-  case class PlayerFailedToBeCreated(login: String) extends PlayerResponse
+  case class PlayerFailedCreated(login: String) extends PlayerResponse
 
 }
 
-class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogging {
+class PlayerServiceActor(factory: MongoFactory)(implicit timeout: Timeout) extends Actor with ActorLogging
+  with MongoService with MongoFactory {
 
   import PlayerServiceActor._
   import context._
 
+  val mongoHost = factory.mongoHost
+  val mongoPort = factory.mongoPort
+  val databaseName = factory.databaseName
+  val playersCollection = factory.playersCollection
+
   var playerActorsMap = Map.empty[String, ActorRef]
 
-  def createPlayerActor(login: String) =
-    context.actorOf(PlayersActor.props(login), login)
+  def getPlayerActor(login: String) =
+    context.child(login).getOrElse(context.actorOf(PlayersActor.props(login, factory), login))
 
-  var players = Set.empty[String]
+  def playerNotFound() = sender() ! PlayerUtils.emptyPlayer
+
+  var players = Vector.empty[String]
+
+  override def preStart() = {
+    super.preStart()
+    players = mongoRepository.getAllPlayersLogins()
+  }
 
   override def receive: Receive = {
     case CreatePlayer(player) => {
@@ -50,8 +64,9 @@ class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogg
 
       def create() = {
         if (!players.contains(newLogin)) {
-          players += newLogin
-          val playerActor = createPlayerActor(newLogin)
+          players = players.appended(newLogin)
+          val playerActor = getPlayerActor(newLogin)
+          log.info(s"playerActor for $newLogin created ")
           playerActor ! PlayersActor.Add(player)
           log.info(s"ready to send PlayerCreated to sender() ${sender()}")
           sender() ! PlayerCreated(newLogin)
@@ -62,17 +77,20 @@ class PlayerServiceActor(implicit timeout: Timeout) extends Actor with ActorLogg
       create()
     }
     case GetPlayer(login) => {
-      def notFound() = sender() ! None
 
       def getPlayer(child: ActorRef) = child forward PlayersActor.GetPlayer(login)
 
-      context.child(login).fold(notFound())(getPlayer)
+      players.find(_ == login) match {
+        case Some(_) => getPlayer(getPlayerActor(login))
+        case None => playerNotFound()
+      }
     }
     case GetPlayers => {
       import akka.pattern.{ask, pipe}
 
       def getPlayers = {
         log.info(s"processing GetPlayers msg, player actors are ${context.children}")
+        players.foreach(getPlayerActor)
         context.children.map { child =>
           self.ask(GetPlayer(child.path.name)).mapTo[Player]
         }

@@ -1,23 +1,28 @@
 package weathergame.weather
 
 import java.util.UUID.randomUUID
-import WeatherUtils._
 
-import weathergame.weather.WeatherTypes.{Precipitation, Sky}
+import WeatherUtils._
+import akka.http.scaladsl.model.DateTime
+import weathergame.weather.WeatherTypes.{Precipitation, Sky, WeatherADT}
 
 case class Weather(id: String = generateId,
                    temperature: Option[Int] = None,
                    precipitation: Option[Precipitation] = None,
                    sky: Option[Sky] = None,
                    humidity: Option[Int] = None,
-                   wind: Option[Int] = None
+                   wind: Option[Int] = None,
+                   date: Option[String] = None,
+                   location: Option[String] = None
                   )
 
 case class WeatherList(list: Vector[Weather])
 
 object WeatherTypes {
 
-  sealed trait Precipitation
+  sealed trait WeatherADT
+
+  sealed trait Precipitation extends WeatherADT
 
   case class NoPrecipitation(name: String = "no") extends Precipitation
 
@@ -27,7 +32,9 @@ object WeatherTypes {
 
   case class Hail(name: String = "hail") extends Precipitation
 
-  sealed trait Sky
+  sealed trait Sky extends WeatherADT
+
+  case class NoSky(name: String = "no") extends Sky
 
   case class Sunny(name: String = "sunny") extends Sky
 
@@ -41,6 +48,7 @@ object WeatherTypes {
 
 object WeatherUtils {
   def generateId = randomUUID.toString //todo how to use method
+
   def emptyWeather = Weather(id = "")
 }
 
